@@ -1,0 +1,239 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+  <head>
+    <title> Grading Exam Papers </title>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+    <!-- bootstrap -->
+    <link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+    <script src="http://code.jquery.com/jquery-2.0.3.min.js"></script> 
+    <script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>  
+
+    <!-- x-editable (bootstrap version) -->
+    <link href="//cdnjs.cloudflare.com/ajax/libs/x-editable/1.4.6/bootstrap-editable/css/bootstrap-editable.css" rel="stylesheet"/>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/x-editable/1.4.6/bootstrap-editable/js/bootstrap-editable.min.js"></script>
+    <script src="fabric/fabric.js"> </script>
+
+  <script type="text/javascript">
+var Upload = function (file, tool, input) {
+    this.file = file;
+    this.tool = tool;
+    this.input = input;
+};
+
+Upload.prototype.getType = function() {
+    return this.file.type;
+};
+Upload.prototype.getSize = function() {
+    return this.file.size;
+};
+Upload.prototype.getName = function() {
+    return this.file.name;
+};
+Upload.prototype.doUpload = function () {
+    var that = this;
+    var formData = new FormData();
+
+    // add assoc key values, this will be posts values
+    formData.append("uploads", this.file, this.getName());
+    formData.append("go", "upload");
+    formData.append("tool", this.tool);
+    formData.append("input", this.input);
+
+    $.ajax({
+        type: "POST",
+        url: "grade.php",
+        xhr: function () {
+            var myXhr = $.ajaxSettings.xhr();
+            if (myXhr.upload) {
+                myXhr.upload.addEventListener('progress', that.progressHandling, false);
+            }
+            return myXhr;
+        },
+        success: function (data) {
+            // your callback here
+          $('#uploadstatus').append("Successfully uploaded: " + that.getName());
+          $('#uploadstatus').append("<br/>");
+          $('#uploadstatus').append(data);
+        },
+        error: function (error) {
+            // handle error
+          $('#uploadstatus').append("Error in Uploading: " + that.getName());
+          $('#uploadstatus').append("<br/>");
+        },
+        async: true,
+        data: formData,
+        cache: false,
+        contentType: false,
+        processData: false,
+        timeout: 60000
+    });
+};
+
+Upload.prototype.progressHandling = function (event) {
+    var percent = 0;
+    var position = event.loaded || event.position;
+    var total = event.total;
+    var progress_bar_id = "#progress-wrp";
+    if (event.lengthComputable) {
+        percent = Math.ceil(position / total * 100);
+    }
+    // update progressbars classes so it fits your code
+    $(progress_bar_id + " .progress-bar").css("width", +percent + "%");
+    $(progress_bar_id + " .status").text(percent + "%");
+};
+
+function callUpload() {
+  var files = $('#selectedfile')[0].files;
+  var tool = $('#select-tools').val();
+  var input = $('#inputtext').val();
+  if (/^admin/.test(input) && (tool == "Roster" || tool == "Upload Scans")) {
+    for (var i = 0; i < files.length; i++) {
+      var upload = new Upload(files[i], tool, input);
+
+      // maby check size or type here with upload.getSize() and upload.getType()
+
+      // execute upload
+      upload.doUpload();
+    }
+  }
+  return false;
+}
+
+function callClear() {
+  //$('#inputtext').val("");
+  $('#uploadstatus').html("");
+  var percent = 0;
+  var progress_bar_id = "#progress-wrp";
+  $(progress_bar_id + " .progress-bar").css("width", +percent + "%");
+  $(progress_bar_id + " .status").text(percent + "%");
+}
+
+function showID(input) {
+  d3.json("grade.php?go=getPages&input=" + input,
+      function (data) {
+        d3.select("#templateContainer").html("");
+        var reftable = d3.select("#templateContainer").append("table")
+          .attr("id", "reftable").attr("border", 0);
+        var imgc = d3.select("#templateContainer")
+          .append("div").attr("style",
+              "display:inline-block; margin: 0 auto; position:relative; width:850px;height:1100px");
+        var img = imgc
+          .append("img").attr("src", data[0][2]).attr("style",
+              "position:absolute;z-index:1;width:100%");
+        var c = imgc
+          .append("canvas").attr("id", "imgCanvas").attr("style",
+              "position:relative;z-index:20;width:850px;height:1100px");
+        var idx = $.map($(Array(data.length + 1)),function(v, i) { return i; });
+        var pages = reftable.append("tr").selectAll("td").data(idx)
+          .enter().append("td").html(function (d) { 
+            if (d == 0) {
+              return "Pages:";
+            }
+            else {
+              return data[d - 1][1]; } })
+          .style("width", "100px").style("text-align", "center")
+          .on('mouseover', function(){
+            d3.select(this).style('background-color', 'gray');})
+          .on('mouseout', function(){
+            d3.select(this).style('background-color', 'white');})
+          .on("click", function(d) {
+            var obj = d3.select(this).data();
+            if (obj[0] > 0) {
+              img.attr("src", data[obj[0] - 1][2]);
+            }
+          });
+      });
+}
+
+function callShow() {
+  var tool = $('#select-tools').val();
+  var input = $('#inputtext').val();
+  if (tool == "Template") {
+    showID(input);
+  }
+}
+  </script>
+
+  <style>
+    html, body {
+      margin: 0px;
+      background-color: white;
+    }
+
+    #select-tools {
+      width: unset;
+      padding: unset;
+      margin: unset;
+    }
+#progress-wrp {
+    border: 1px solid #0099CC;
+    padding: 1px;
+    position: relative;
+    height: 30px;
+    border-radius: 3px;
+    margin: 10px;
+    text-align: left;
+    background: #fff;
+    box-shadow: inset 1px 3px 6px rgba(0, 0, 0, 0.12);
+}
+#progress-wrp .progress-bar{
+    height: 100%;
+    border-radius: 3px;
+    background-color: #f39ac7;
+    width: 0;
+    box-shadow: inset 1px 1px 10px rgba(0, 0, 0, 0.11);
+}
+#progress-wrp .status{
+    top:3px;
+    left:50%;
+    position:absolute;
+    display:inline-block;
+    color: #000000;
+}
+  </style>
+  </head>
+  <body>
+    <h1> Grading Exam Papers </h1>
+    <h2>Tools </h2>
+    <form action="grade.php" 
+      method="post" ENCTYPE="multipart/form-data">
+      <table border="0">
+        <tr><td>
+            Select:
+      <select id="select-tools">
+        <option>Template</option>
+        <option>Match</option>
+        <option>Grade</option>
+        <option>Roster</option>
+        <option>Upload Scans</option>
+        <option>None</option>
+      </select>
+          </td><td>
+          </td></tr>
+        <tr><td>
+      Input: <input type="text" id="inputtext" name="input" size="20"/> 
+          </td><td>
+      <input type="button" name="Show" value="Show"
+            onclick="return callShow();"/>
+          </td></tr>
+        <tr><td>
+      File: <input id="selectedfile" type="file" name="uploads[]" size="30" multiple=""/>
+          </td><td>
+      <input type="submit" value="Upload" onclick="return callUpload();"/>
+      <input type="button" value="Clear" onclick="return callClear();"/>
+          </td></tr>
+        <tr><td>
+<div id="progress-wrp">
+    <div class="progress-bar"></div>
+    <div class="status">0%</div>
+</div>
+          </td><td>
+            <div id="uploadstatus"></div>
+          </td></tr>
+        <tr><td>
+      </table>
+    </form>
+    <div id="templateContainer"> </div>
+  </body>
+</html>
