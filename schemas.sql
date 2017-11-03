@@ -54,3 +54,14 @@ value REAL,
 rlist text,
 PRIMARY KEY (scanid, tid)
 );
+DROP TABLE graders;
+CREATE TABLE graders
+(
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+lastName text,
+firstName text,
+userName text,
+password text,
+email text,
+role text
+);
