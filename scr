@@ -8,6 +8,9 @@ chmod gao+rwx tmpdir/scans
 sqlite3 tmpdir/students.db < schemas.sql
 chmod gao+rw tmpdir/students.db
 
+sqlite3 tmpdir/graders.db < graders.sql
+chmod gao+rw tmpdir/graders.db
+
 php-cgi grade.php go=upload tool="Upload Scans" file="scans-1.PDF" input="num=2"
 php-cgi grade.php go=upload tool=Roster file="students.txt"
 

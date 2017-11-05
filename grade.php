@@ -1,9 +1,28 @@
 <?php
 
-$target_dir = "tmpdir/";
+$data = false;
 
+$params = [];
+
+function registration_callback($username, $email, $role)
+{
+  // all it does is bind registration data in a global array,
+  // which is echoed on the page after a registration
+  global $data;
+  $data = array($username, $email, $role);
+}
+
+require_once("user.php");
+$USER = new User($params, "registration_callback");
+
+$auth = $USER->authenticated;
+if ($USER->role == 'user') {
+  $auth = 0;
+}
+$target_dir = "tmpdir/";
 $file = "";
-if (array_key_exists("uploads", $_FILES)) {
+
+if ($auth && array_key_exists("uploads", $_FILES)) {
   $filename = $_FILES['uploads']['name'];
   $tmpfilename = $_FILES['uploads']['tmp_name'];
   $target_path = $target_dir . basename($filename);
@@ -18,7 +37,7 @@ if (array_key_exists("file", $_GET)) {
   $file = $_GET["file"];
 }
 
-if (array_key_exists("go", $_POST)) {
+if ($auth && array_key_exists("go", $_POST)) {
   if (strcmp($_POST["go"], "upload") == 0) {
     if (strcmp($_POST["tool"], "Roster") == 0) {
       uploadRoster($file);
@@ -68,6 +87,33 @@ if (array_key_exists("go", $_GET)) {
   if (strcmp($_GET["go"], "getRubric") == 0) {
     getRubric($_GET["scanid"], $_GET["templateid"]);
   }
+  if (strcmp($_GET["go"], "getUsers") == 0) {
+    getUsers();
+  }
+  if ($auth && strcmp($_GET["go"], "updateRole") == 0) {
+    updateRole($_GET["username"], $_GET["role"]);
+  }
+}
+
+function updateRole($username, $role) {
+  $res = [];
+  $db = new SQLite3('tmpdir/graders.db');
+  $str = "UPDATE graders SET role='$role' WHERE username='$username'";
+  $results = $db->query($str);
+  array_push($res, $str);
+  echo json_encode($res);
+}
+
+function getUsers() {
+  $res = [];
+  $db = new SQLite3('tmpdir/graders.db');
+  $results = $db->query("SELECT lastname,firstname,username,email,role,active,last FROM graders");
+  while ($row = $results->fetchArray()) {
+    array_push($res,
+      [$row["lastname"], $row["firstname"], $row["username"], $row["email"],
+        $row["role"], $row["active"], time() - $row["last"]]);
+  }
+  echo json_encode($res);
 }
 
 function getDB() {

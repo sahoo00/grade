@@ -55,13 +55,11 @@ rlist text,
 PRIMARY KEY (scanid, tid)
 );
 DROP TABLE graders;
-CREATE TABLE graders
-(
-id INTEGER PRIMARY KEY AUTOINCREMENT,
-lastName text,
-firstName text,
-userName text,
-password text,
-email text,
-role text
-);
+CREATE TABLE graders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  lastName text,
+  firstName text,
+  username TEXT UNIQUE,
+  password TEXT,
+  email TEXT UNIQUE,
+  token TEXT, role TEXT, active TEXT, last TEXT);

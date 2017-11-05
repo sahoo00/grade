@@ -743,8 +743,60 @@ fabric.util.object.extend(fabric.Object.prototype, {
         });
   }
 
-
 })();
+
+function showUsers() {
+  d3.json("grade.php?go=getUsers",
+      function (data) {
+        d3.select("#templateContainer").html("");
+        var reftable = d3.select("#templateContainer").append("table")
+          .attr("id", "utable").attr("border", 0);
+        var refthead = reftable.append("thead"),
+        reftbody = reftable.append("tbody").attr("id", "userList");
+        var columns = ["Last name", "First name", "Username", 
+        "email", "role", "active"];
+        refthead.append("tr").selectAll("th").data(columns)
+          .enter().append("th").attr("align", "left").text(ident);
+        reftbody.selectAll("tr").data(data)
+          .enter()
+          .append("tr").attr("id", function (d, i) { return i; })
+          .selectAll("td").data(function (d, i) {
+            res = d.slice(0, 5);
+            active = d[5];
+            t = d[6];
+            if (active == "true") {
+              if (t < 60) { active = t + "s"; }
+              else if (t < 3600) { active = (t/60).toFixed(2) + " min"; }
+              else if (t < 3600 * 24) { active = (t/3600).toFixed(2) + " hrs"; }
+              else { active = (t/3600/24).toFixed(2) + " days"; }
+            }
+            res.push(active);
+            return res;
+          }).enter().append("td").html(ident);
+        reftbody.selectAll("tr").selectAll("td")
+          .filter(function (d, i) { return i == 4; })
+          .each(function (d) {
+            var cell = d3.select(this);
+            var obj = d3.select(this.parentNode).data();
+            $(cell.node()).editable({
+              type: 'select',
+              value: d,
+              source: [
+              {value: "admin", text: "admin"},
+              {value: "grader", text: "grader"},
+              {value: "user", text: "user"}
+              ],
+              success: function(response, newValue) {
+                obj[0][4] = newValue;
+                d3.json("grade.php?go=updateRole&username=" + obj[0][2] +
+                    "&role=" + obj[0][4], function (data) {
+                    console.log(data);
+                });
+              }
+            });
+          });
+      });
+}
 
 var currScan = null;
 function callShow() {
@@ -752,6 +804,9 @@ function callShow() {
   var input = $('#inputtext').val();
   if (tool == "Template" || tool == "Match" || tool == "Grade") {
     currScan = new ShowID(input, tool);
+  }
+  if (tool == "Users") {
+    showUsers();
   }
 }
 

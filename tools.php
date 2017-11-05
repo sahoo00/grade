@@ -1,3 +1,44 @@
+<?php
+
+$data = false;
+
+$params = [];
+foreach ($_POST as $k => $v) {
+  $params[$k] = $v;
+}
+foreach ($_GET as $k => $v) {
+  $params[$k] = $v;
+}
+
+function registration_callback($username, $email, $role)
+{
+  // all it does is bind registration data in a global array,
+  // which is echoed on the page after a registration
+  global $data;
+  $data = array($username, $email, $role);
+}
+
+require_once("user.php");
+$USER = new User($params, "registration_callback");
+
+if ($data && $data[0] != $USER->username) {
+  $USER->username = $data[0];
+  $USER->email = $data[1];
+  $USER->role = $data[2];
+}
+
+if (!$data) {
+  $data = [$USER->username, $USER->email, $USER->role];
+}
+
+// print_r($params);
+// echo "<br/>";
+// print_r([$USER->authenticated, $USER->username, $USER->role, $data]);
+// echo "<br/>";
+// print_r($USER->info_log);
+
+if ($USER->authenticated && ($USER->role == "admin" || $USER->role == "grader")) {
+?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
      "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
@@ -19,6 +60,18 @@
 
     <script src="grade.js"> </script>
   <script type="text/javascript">
+
+  function onLoad() {
+  }
+
+  function processLogout() {
+    var name = "<?php echo $data[0]; ?>";
+    d3.json("tools.php?op=logout&username=" + name,
+        function (data) {
+          window.location.href = "index.html";
+    });
+    return false;
+  }
 
   </script>
 
@@ -60,8 +113,18 @@
 }
   </style>
   </head>
-  <body>
-    <h1> Grading Exam Papers </h1>
+  <body onload="onLoad();">
+    <table border=0>
+    <tr><td> <h1> Grading Exam Papers </h1> </td>
+    <td> &nbsp; &nbsp; </td>
+    <td>
+<?php 
+    echo $data[0].":".$data[2]."<br/>";
+?>
+    <a href="index.html" onclick="return processLogout();"> Logout </a>
+    </td> </tr>
+    </table>
+<?php if ($USER->role == "admin" || $USER->role == "grader") { ?>
     <h2>Tools </h2>
     <form action="grade.php" 
       method="post" ENCTYPE="multipart/form-data">
@@ -69,12 +132,15 @@
         <tr><td>
             Select:
       <select id="select-tools">
+<?php if ($USER->role == "admin" || $USER->role == "grader") { ?>
         <option>Grade</option>
         <option>Match</option>
+<?php } if ($USER->role == "admin") { ?>
         <option>Template</option>
         <option>Roster</option>
         <option>Upload Scans</option>
-        <option>None</option>
+        <option>Users</option>
+<?php } ?>
       </select>
           </td><td>
           </td></tr>
@@ -88,6 +154,7 @@
       <input type="button" name="Save" value="Save"
             onclick="return callSave();"/>
           </td></tr>
+<?php if ($USER->role == "admin") { ?>
         <tr><td>
       File: <input id="selectedfile" type="file" name="uploads[]" size="30" multiple=""/>
           </td><td>
@@ -102,9 +169,15 @@
           </td><td>
             <div id="uploadstatus"></div>
           </td></tr>
+<?php } ?>
         <tr><td>
+        </td></tr>
       </table>
     </form>
+<?php } ?>
     <div id="templateContainer"> </div>
   </body>
 </html>
+<?php
+}
+?>
