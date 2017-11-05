@@ -94,14 +94,11 @@ function callClear() {
 }
 
 var ident = function (d) { return d; };
-function ShowID(input, tool) {
-  this.input = input;
+function ShowID(tool) {
   this.tool = tool;
   this.fc = null;
   this.img = null;
-  if (this.init) {
-    this.init(input);
-  }
+  this.tselIndex = null;
 }
 
 (function() {
@@ -145,6 +142,7 @@ fabric.util.object.extend(fabric.Object.prototype, {
   ShowID.prototype.init = function(input) {
     var curr = this;
     curr.init_vars();
+    curr.input = input;
 
     d3.json("grade.php?go=getPages&input=" + input,
         function (data) {
@@ -396,8 +394,17 @@ fabric.util.object.extend(fabric.Object.prototype, {
           return this.selected; 
         });
       tdata = tsel.data()[0];
+      var obj = d3.select("#tsel").node().options;
+      curr.tselIndex = obj.selectedIndex;
     }
     curr.currTData = tdata;
+    if (curr.currPage != tdata[3]) {
+      curr.img.setSrc(curr.data[tdata[3] - 1][2], function (d) {
+        curr.currPage = tdata[3];
+        curr.hideObjects();
+        curr.fc.renderAll();
+      });
+    }
     d3.select("#rlist").html(tdata[1] + " - [" + tdata[2] + "] &nbsp&nbsp");
     if (curr.tool == "Grade") {
       d3.select("#rlist").append("span").html("(+)")
@@ -476,7 +483,16 @@ fabric.util.object.extend(fabric.Object.prototype, {
               }
               curr.gradeOneRegion();
             });
-          curr.gradeOneRegion(data[0]);
+          if (data) {
+            if (!curr.tselIndex) {
+              curr.tselIndex = 0;
+            }
+            else {
+              var obj = tbl.select("#tsel").node().options;
+              obj.selectedIndex = curr.tselIndex;
+            }
+            curr.gradeOneRegion(data[curr.tselIndex]);
+          }
         });
   }
 
@@ -803,7 +819,11 @@ function callShow() {
   var tool = $('#select-tools').val();
   var input = $('#inputtext').val();
   if (tool == "Template" || tool == "Match" || tool == "Grade") {
-    currScan = new ShowID(input, tool);
+    if (!currScan) {
+      currScan = new ShowID(tool);
+    }
+    currScan.tool = tool;
+    currScan.init(input);
   }
   if (tool == "Users") {
     showUsers();
@@ -815,7 +835,8 @@ function callNext() {
   var input = $('#inputtext').val();
   if (tool == "Template" || tool == "Match" || tool == "Grade") {
     if (currScan && currScan.data) {
-      currScan = new ShowID(currScan.data[0][0] + 1, tool);
+      currScan.tool = tool;
+      currScan.init(currScan.data[0][0] + 1);
     }
   }
 }

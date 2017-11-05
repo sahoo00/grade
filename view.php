@@ -22,7 +22,8 @@
    if (array_key_exists("urid", $_GET)) {
      $urid = $_GET["urid"];
    }
-   echo "currScan = new ShowID('View:$urid', 'View');";
+   echo "currScan = new ShowID('View');\n";
+   echo "currScan.init('View:$urid');\n";
 ?>
 
   </script>

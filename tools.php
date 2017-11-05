@@ -68,7 +68,7 @@ if ($USER->authenticated && ($USER->role == "admin" || $USER->role == "grader"))
     var name = "<?php echo $data[0]; ?>";
     d3.json("tools.php?op=logout&username=" + name,
         function (data) {
-          window.location.href = "index.html";
+          window.location.href = "index.php";
     });
     return false;
   }
@@ -121,7 +121,7 @@ if ($USER->authenticated && ($USER->role == "admin" || $USER->role == "grader"))
 <?php 
     echo $data[0].":".$data[2]."<br/>";
 ?>
-    <a href="index.html" onclick="return processLogout();"> Logout </a>
+    <a href="index.php" onclick="return processLogout();"> Logout </a>
     </td> </tr>
     </table>
 <?php if ($USER->role == "admin" || $USER->role == "grader") { ?>
@@ -179,5 +179,8 @@ if ($USER->authenticated && ($USER->role == "admin" || $USER->role == "grader"))
   </body>
 </html>
 <?php
+}
+else {
+  include("index.php");
 }
 ?>

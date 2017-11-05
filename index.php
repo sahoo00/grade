@@ -52,6 +52,11 @@ function onLoad() {
   padding: 10px;
 }
 
+#errorInfo {
+  padding: 10px;
+  color: #a33;
+}
+
 .field-wrap {
   position:relative;
   margin-bottom:40px;
@@ -108,6 +113,11 @@ input {
 input:focus {
     outline:0;
     border-color:#1b8;
+}
+
+input.error {
+    outline:0;
+    border-color:#a33;
 }
 
 </style>
@@ -220,5 +230,25 @@ input:focus {
         
       </div><!-- tab-content -->
 </div> <!-- loginForm -->
+<div id="errorInfo">
+<?php
+if ($USER) {
+  foreach ($USER->error_log as $k) {
+    echo "<p> $k </p>\n";
+  }
+  foreach ($USER->info_log as $k) {
+    echo "<p> $k </p>\n";
+  }
+  if ($USER->authenticated) {
+    if ($USER->role == "user") {
+      echo "<p>You must be admin or grader to use this website</p>\n";
+    }
+    else {
+      echo "<p>You are logged in</p>\n";
+    }
+  }
+}
+?>
+</div>
   </body>
 </html>
