@@ -140,7 +140,7 @@ input.error {
 	    <input type="hidden" name="sha1" value=""/>
             <div class="field-wrap">
               <label>
-                Username/Email<span class="req">*</span>
+                Username<span class="req">*</span>
               </label>
               <input type="text" required autocomplete="off"
 					  name="username"/>

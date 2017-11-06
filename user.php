@@ -25,7 +25,7 @@
 			// notification emails to work. Also note that password resetting doesn't work
 			// unless mail notification is turned on.
 
-			const use_mail = false;
+			const use_mail = true;
 
 			// This value should point to a directory that is not available to web users.
 			// If your documents are in ./public_html, for instance., then put database
@@ -74,14 +74,14 @@
 
 			// You'll probably want to change this to something sensible. If your site is
 			// www.sockmonkey.com, then you want this to be "sockmonkey.com"
-			const DOMAIN_NAME = "localhost";
+			const DOMAIN_NAME = "cse100f17";
 
 			// This is going to be the "from" address
 			const MAILER_NAME = "noreply@localhost";
 
 			// if you want people to be able to reply to a real address, override
 			// this variable to "yourmail@somedomain.ext" here.
-			const MAILER_REPLYTO = "noreply@localhost";
+			const MAILER_REPLYTO = "dsahoo@eng.ucsd.edu";
 
 		// =======================================================================
 		// 	Don't modify any variables beyond this point =)
@@ -284,7 +284,7 @@
 
 	Because of the way our user registration works, we have no idea which password was used to register this account (it gets one-way hashed by the browser before it is sent to our user registration system, so that we don't know your password either), so if you registered this account, hopefully you wrote your password down somewhere.
 
-	However, if you ever forget your password, you can click the "I forgot my password" link in the log-in section for $domain_name and you will be sent an email containing a new, ridiculously long and complicated password that you can use to log in. You can change your password after logging in, but that's up to you. No one's going to guess it, or brute force it, but if other people can read your emails, it's generally a good idea to change passwords.
+	However, if you ever forget your password, you can click the "Forgot password?" link in the log-in section for $domain_name and you will be sent an email containing a new, ridiculously long and complicated password that you can use to log in. You can change your password after logging in, but that's up to you. No one's going to guess it, or brute force it, but if other people can read your emails, it's generally a good idea to change passwords.
 
 	If you were not the one to register this account, you can either contact us the normal way or —much easier— you can ask the system to reset the password for the account, after which you can simply log in with the temporary password and delete the account. That'll teach whoever pretended to be you not to mess with you!
 
@@ -363,9 +363,9 @@ EOT;
 
 	$newpassword
 
-	If you didn't even know this account existed, now is the time to log in and delete it. How dare people use your email address to register accounts! Of course, if you did register it yourself, but you didn't request the reset, some jerk is apparently reset-spamming. We hope he gets run over by a steam shovel driven by rabid ocelots or something.
+	If you didn't even know this account existed, now is the time to log in and delete it.
 
-	Then again, it's far more likely that you did register this account, and you simply forgot the password so you asked for the reset yourself, in which case: here's your new password, and thank you for your patronage at $domain_name!
+	If you did register this account, and you simply forgot the password so you asked for the reset yourself, in which case: here's your new password, and thank you for your patronage at $domain_name!
 
 	- the $domain_name team
 EOT;
