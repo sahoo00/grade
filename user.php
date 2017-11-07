@@ -138,6 +138,9 @@
 		// GET/POST data
 		var $params = false;
 
+		// result of update and reset
+		var $result = false;
+
 		// class object constructor
 		function __construct($params, $registration_callback=false)
 		{
@@ -169,12 +172,11 @@
 				elseif($operation == "logout") { $this->authenticated = !$this->logout(); }
 				elseif($operation == "unregister") { $this->authenticated = !$this->unregister(); }
 				// anything else won't change authentication status.
-				elseif($operation == "signup") { $this->register($registration_callback); }
-				elseif($operation == "update") { $this->update(); }
+				elseif($operation == "signup") { $this->result = $this->register($registration_callback); }
+				elseif($operation == "update") { $this->result = $this->update(); }
 				// we only allow password resetting if we can send notification mails
-				elseif($operation == "reset" && User::use_mail) { $this->reset_password(); }
+				elseif($operation == "reset" && User::use_mail) { $this->result = $this->reset_password(); }
 			}
-                        else {
 
 			// if the previous operations didn't authorise the current user,
 			// see if they're already marked as authorised in the database.
@@ -183,7 +185,6 @@
 				if($username != User::GUEST_USER) {
 					$this->authenticated = $this->authenticate_user($username,"");
 					if($this->authenticated) { $this->mark_user_active($username); }}}
-                        }
 
 			// at this point we can make some globals available.
 			$this->username = $_SESSION["username"];
@@ -307,17 +308,27 @@ EOT;
 		function update()
 		{
 			// get relevant values
-			$email = trim($this->params["email"]);
-			$sha1 = trim($this->params["sha1"]);
+			$email = $this->params["email"];
+			$sha1 = $this->params["sha1"];
+			$sha2 = $this->params["sha2"];
 			// step 1: someone could have bypassed the javascript validation, so validate again.
-			if($email !="" && preg_match(User::emailregexp, $email)==0) {
-				$this->info("registration error: email address did not pass validation");
-				return false; }
-			if($sha1 !="" && preg_match(User::sha1regexp, $sha1)==0) {
-				$this->info("registration error: password did not pass validation");
-				return false; }
+                        if($email !="") {
+                          if(preg_match(User::emailregexp, $email)==0) {
+                            $this->info("registration error: email address did not pass validation");
+                            return false; }
+                        }
+                        if($sha1 !="") {
+                          if(preg_match(User::sha1regexp, $sha1)==0) {
+                            $this->info("registration error: password1 did not pass validation");
+                            return false; }
+                        }
+                        if($sha2 !="") {
+                          if(preg_match(User::sha1regexp, $sha2)==0) {
+                            $this->info("registration error: password2 did not pass validation");
+                            return false; }
+                        }
 			// step 2: if validation passed, update the user's information
-			return $this->update_user($email, $sha1);
+			return $this->update_user($email, $sha1, $sha2);
 		}
 
 		/**
@@ -529,11 +540,11 @@ EOT;
 			return false;
 		}
 
-		/**
-		 * Log a user in
-		 */
-		function login_user($username, $sha1)
-		{
+                /*
+                 * Check password
+                 */
+                function check_password($username, $sha1)
+                {
 			// transform sha1 into real password
 			$dbpassword = $this->token_hash_password($username, $sha1, $this->get_user_token($username));
 			if($dbpassword==$sha1) {
@@ -544,10 +555,7 @@ EOT;
 			$query = "SELECT password FROM graders WHERE username = '$username'";
 			foreach($this->database->query($query) as $data) {
 				if($dbpassword==$data["password"]) {
-					// authentication passed - 1) mark active and update token
-					$this->mark_user_active($username);
-					$this->setSession($username, $this->update_user_token($username, $sha1));
-					// authentication passed - 2) signal authenticated
+					// authentication passed
 					return true; }
 				// authentication failed
 				$this->info("password mismatch for $username");
@@ -560,23 +568,55 @@ EOT;
 			if(User::unsafe_reporting) { $this->error = "user $username is unknown."; }
 			else { $this->error = "you either did not correctly input your username, or password (... or both)."; }
 			return false;
+                }
+
+		/**
+		 * Log a user in
+		 */
+		function login_user($username, $sha1)
+		{
+                  if($this->check_password($username, $sha1)) {
+                    // authentication passed - 1) mark active and update token
+                    $this->mark_user_active($username);
+                    $this->setSession($username, $this->update_user_token($username, $sha1));
+                    // authentication passed - 2) signal authenticated
+                    return true; }
+                    return false;
 		}
+
+                function execdb($str) {
+                  $num = $this->database->exec($str);
+                  if ($num <= 0) { 
+                    $arr = $this->database->errorInfo();
+                    if (count($arr) > 0) {
+                      $this->info(end($arr));
+                    }
+                    return false;
+                  }
+                  return true;
+                }
 
 		/**
 		 * Update a user's information
 		 */
-		function update_user($email, $sha1)
-		{
-			$username = $_SESSION["username"];
-			if($email !="") {
-				$update = "UPDATE graders SET email = '$email' WHERE username = '$username'";
-				$this->database->exec($update); }
-			if($sha1 !="") {
-				$dbpassword = $this->token_hash_password($username, $sha1, $this->get_user_token($username));
-				$update = "UPDATE graders SET password = '$dbpassword' WHERE username = '$username'";
-				$this->database->exec($update); }
-			$this->info("update the information for $username");
-		}
+		function update_user($email, $sha1, $sha2)
+                {
+                  $username = $_SESSION["username"];
+                  if($this->check_password($username, $sha1)) {
+                    $updated = true;
+                    // authentication passed - 1) update email
+                    if($email !="") {
+                      $update = "UPDATE graders SET email = '$email' WHERE username = '$username'";
+                      $updated = $this->execdb($update) & $updated;}
+                    // authentication passed - 1) update password
+                    if($sha2 !="") {
+                      $dbpassword = $this->token_hash_password($username, $sha2, $this->get_user_token($username));
+                      $update = "UPDATE graders SET password = '$dbpassword' WHERE username = '$username'";
+                      $updated = $this->execdb($update) & $updated; }
+                      $this->info("information for $username updated");
+                    return $updated; }
+                  return false;
+                }
 
 		/**
 		 * Log a user out.

@@ -153,24 +153,50 @@ User = {
 	{
 		var valid = true;
 		var update = false;
-		var form = $('#reset').find('form')[0];
+		var form = $('#change-pw').find('form')[0];
 
-		// email?
 		if(form["email"].value.trim()!="") {
-			valid &= this.validEmail(form["email"]);
-			if(valid) update = true; }
-
+                  valid &= this.validEmail(form["email"]);
+                  update = true;
+                }
 		// password?
+		if(form["password"].value.trim()!="") {
+                  form["sha1"].value = Sha1.hash(form["password"].value);
+                  form["password"].value = this.randomString(16);
+                }
 		if(form["password1"].value.trim()!="") {
-			valid &= this.passwordMatch(form["password1"], form["password2"]);
-			valid &= this.strongPassword(form["password1"]);
-			if(valid) {
-				form["sha1"].value = Sha1.hash(form["password1"].value);
-				form["password1"].value = this.randomString(16);
-				form["password2"].value = form["password1"].value;
-				update = true; }}
+                  valid &= this.passwordMatch(form["password1"], form["password2"]);
+                  valid &= this.strongPassword(form["password1"]);
+                  if(valid) {
+                    form["sha2"].value = Sha1.hash(form["password1"].value);
+                    form["password1"].value = form["password"].value;
+                    form["password2"].value = form["password"].value;
+                    update = true; }}
 
-		if(valid && update) { form.submit(); }
+		if(valid && update) {
+                  var fd = new FormData(form );
+                  $.ajax({
+                    url: "auth.php",
+                    data: fd,
+                    cache: false,
+                    processData: false,
+                    contentType: false,
+                    type: 'POST',
+                    success: function (d) {
+                      var obj = JSON.parse(d);
+                      console.log(obj);
+                      var st = $('#cstatus');
+                      st.html("Status:<br/>");
+                      if (obj[0]) { st.append("Success<br/>"); }
+                      else { st.append("Failed<br/>"); }
+                      if (obj[1]) { st.append("Active |"); }
+                      else { st.append("Inactive |"); }
+                      st.append(obj[2].join("|") + "<br/>");
+                      st.append(obj[3].join("<br/>") + "<br/>");
+                      st.append(obj[4].join("<br/>") + "<br/>");
+                    }
+                  });
+                }
                 return false;
 	},
 

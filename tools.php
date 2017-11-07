@@ -21,15 +21,12 @@ function registration_callback($username, $email, $role)
 require_once("user.php");
 $USER = new User($params, "registration_callback");
 
-if ($data && $data[0] != $USER->username) {
-  $USER->username = $data[0];
-  $USER->email = $data[1];
-  $USER->role = $data[2];
+if ($data && $params["op"] == "signup") {
+  $params["op"] = "login";
+  $USER = new User($params, "registration_callback");
 }
 
-if (!$data) {
-  $data = [$USER->username, $USER->email, $USER->role];
-}
+$data = [$USER->username, $USER->email, $USER->role];
 
 // print_r($params);
 // echo "<br/>";
@@ -58,6 +55,8 @@ if ($USER->authenticated && ($USER->role == "admin" || $USER->role == "grader"))
     <script src="//cdnjs.cloudflare.com/ajax/libs/x-editable/1.4.6/bootstrap-editable/js/bootstrap-editable.min.js"></script>
     <script src="fabric/fabric.js"> </script>
 
+    <script src="sha1.js"> </script>
+    <script src="user.js"> </script>
     <script src="grade.js"> </script>
   <script type="text/javascript">
 
@@ -71,6 +70,10 @@ if ($USER->authenticated && ($USER->role == "admin" || $USER->role == "grader"))
           window.location.href = "index.php";
     });
     return false;
+  }
+
+  function processChangePassword() {
+    return User.processUpdate();
   }
 
   </script>
@@ -119,9 +122,37 @@ if ($USER->authenticated && ($USER->role == "admin" || $USER->role == "grader"))
     <td> &nbsp; &nbsp; </td>
     <td>
 <?php 
-    echo $data[0].":".$data[2]."<br/>";
+    echo $data[0].":".$data[2];
 ?>
-    <a href="index.php" onclick="return processLogout();"> Logout </a>
+    |
+    <a href="index.php" onclick="return processLogout();"> Logout </a> <br/>
+    <a href="#" data-toggle="modal" data-target="#change-pw">
+        Change email/Password </a>
+    <div class="modal fade" id="change-pw" tabindex="-1" role="dialog"
+    aria-labelledby="myModalLabel" aria-hidden="true"
+    style="display: none; width:400px">
+        <div class="modal-dialog">
+            <div class="modal-content">
+            <h1>Change Password</h1><br>
+            <form action="auth.php" method="post">
+	        <input type="hidden" name="op" value="update"/>
+	        <input type="hidden" name="sha1" value=""/>
+	        <input type="hidden" name="sha2" value=""/>
+                <input type="password" name="password" placeholder="Current Password"/>
+                <br/>
+                <input type="email" name="email" placeholder="Email"/>
+                <br/>
+                <input type="password" name="password1" placeholder="New Password"/>
+                <br/>
+                <input type="password" name="password2" placeholder="Type Password again"/>
+	        <button type="submit" onclick="return processChangePassword();"
+                           class="btn btn-primary">Submit</button>
+                <br/>
+                <span id="cstatus"> Status: </span>
+            </form>
+            </div>
+        </div>
+    </div> <!-- end change-pw -->
     </td> </tr>
     </table>
 <?php if ($USER->role == "admin" || $USER->role == "grader") { ?>
