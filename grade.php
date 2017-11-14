@@ -188,11 +188,17 @@ function saveRubric($input) {
   }
   $mdb->begin();
   for ($i = 0; $i < count($obj); $i++) {
-    $str = "REPLACE into 'rubric' VALUES (".
-      $obj[$i][0] .  ", " . $obj[$i][1] . ", '". $obj[$i][2] . "', " .
-      $obj[$i][3] .")\n";
-    $mdb->query($str);
-    echo $str;
+    $graders = $obj[$i][5];
+    if (findGrader($graders)) {
+      $str = "REPLACE into 'rubric' VALUES (".
+        $obj[$i][0] .  ", " . $obj[$i][1] . ", '". $obj[$i][2] . "', " .
+        $obj[$i][3] . ", '". $obj[$i][4] ."', '$graders')\n";
+      $mdb->query($str);
+      echo $str;
+    }
+    else {
+      echo "Grader not found\n";
+    }
   }
   $mdb->end();
   if (!$mdb->release()) {
@@ -265,7 +271,8 @@ function getRubric($scanid, $templateid) {
     $results = $db->query("SELECT * FROM rubric WHERE id = $templateid");
     while ($row = $results->fetchArray()) {
       array_push($res[0][4],
-        [$row["rid"], $row["name"], $row["value"]]);
+        [$row["rid"], $row["name"], $row["value"], $row["action"],
+        $row["graders"]]);
     }
     $results = $db->query("SELECT * FROM grades WHERE scanid = $scanid AND tid = $templateid");
     while ($row = $results->fetchArray()) {

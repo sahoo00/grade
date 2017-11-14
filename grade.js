@@ -234,7 +234,8 @@ fabric.util.object.extend(fabric.Object.prototype, {
     var tdata = curr.currTData;
     var res = [];
     for (var i = 0; i < tdata[4].length; i++) {
-      res.push([tdata[0], tdata[4][i][0], tdata[4][i][1], tdata[4][i][2]]);
+      res.push([tdata[0], tdata[4][i][0], tdata[4][i][1], tdata[4][i][2],
+        tdata[4][i][3], tdata[4][i][4]]);
     }
     $.ajax({type: 'POST',
       data: {go: "saveRubric", input: JSON.stringify(res)},
@@ -457,7 +458,9 @@ fabric.util.object.extend(fabric.Object.prototype, {
           d3.select(this).style('background-color', 'white');})
         .on("click", function(e) {
           if (!tdata[4]) { tdata[4] = []; }
-          tdata[4].push([tdata[4].length, "New rubric - edit", 0]);
+          var login = getUserLoginData();
+          tdata[4].push([tdata[4].length, "New rubric - edit", 0, "add",
+            login[3]]);
           curr.updateRubric();
         });
     }

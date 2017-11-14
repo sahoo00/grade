@@ -1,18 +1,26 @@
 #!/bin/bash
 
-rm -fr tmpdir
+rm -fr tmpdir/scans
+#rm -fr tmpdir
+
 mkdir -p tmpdir/scans
 chmod gao+rwx tmpdir
 chmod gao+rwx tmpdir/scans
 
+cp htpasswd tmpdir/.htpasswd
+cp htaccess tmpdir/.htaccess
+chmod 444 tmpdir/.ht*
+
 sqlite3 tmpdir/students.db < schemas.sql
 chmod gao+rw tmpdir/students.db
 
-sqlite3 tmpdir/graders.db < graders.sql
-chmod gao+rw tmpdir/graders.db
+#sqlite3 tmpdir/graders.db < graders.sql
+#chmod gao+rw tmpdir/graders.db
 
 php-cgi grade.php go=upload tool="Upload Scans" file="scans-1.PDF" input="num=2"
 php-cgi grade.php go=upload tool=Roster file="students.txt"
 
 sqlite3 tmpdir/students.db < print.sql 
 
+# To update autoincrement sequence
+# UPDATE SQLITE_SEQUENCE SET SEQ=1 WHERE NAME='graders';
