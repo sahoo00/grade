@@ -305,6 +305,7 @@ fabric.util.object.extend(fabric.Object.prototype, {
     var tdata = curr.currTData;
     var maxp = tdata[2];
     var total = maxp;
+    var ototal = null;
     var rlist = "";
     var tsel = d3.select("#irlist").selectAll("tr")
       .each(function (d, i) { 
@@ -315,9 +316,13 @@ fabric.util.object.extend(fabric.Object.prototype, {
         if (ch) {
           total = total + m * g;
           rlist = rlist + i + "x" + m + ",";
+          if (tdata[4][i][3] == "o") {
+            ototal = m * g;
+          }
         }
       });
     if (total < 0) { total = 0; }
+    if (ototal != null) { total = ototal; }
     curr.igrade = total;
     curr.rlist = rlist;
     curr.updateGradeInfo();

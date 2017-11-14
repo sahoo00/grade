@@ -189,16 +189,13 @@ function saveRubric($input) {
   $mdb->begin();
   for ($i = 0; $i < count($obj); $i++) {
     $graders = $obj[$i][5];
-    if (findGrader($graders)) {
-      $str = "REPLACE into 'rubric' VALUES (".
-        $obj[$i][0] .  ", " . $obj[$i][1] . ", '". $obj[$i][2] . "', " .
-        $obj[$i][3] . ", '". $obj[$i][4] ."', '$graders')\n";
-      $mdb->query($str);
-      echo $str;
-    }
-    else {
-      echo "Grader not found\n";
-    }
+    // Grader check not enforced because it records the grader that started the
+    // rubric.
+    $str = "REPLACE into 'rubric' VALUES (".
+      $obj[$i][0] .  ", " . $obj[$i][1] . ", '". $obj[$i][2] . "', " .
+      $obj[$i][3] . ", '". $obj[$i][4] ."', '$graders')\n";
+    $mdb->query($str);
+    echo $str;
   }
   $mdb->end();
   if (!$mdb->release()) {
