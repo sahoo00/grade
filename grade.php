@@ -200,6 +200,18 @@ function saveRubric($input) {
   }
 }
 
+function findGrader($graders) {
+  global $USER;
+  $res = 0;
+  foreach (explode(",", $graders) as $id) {
+    if ($id == $USER->userid) {
+      $res = 1;
+      break;
+    }
+  }
+  return $res;
+}
+
 function saveGrade($input) {
   $res = urldecode($input);
   $obj = json_decode($res);
@@ -212,11 +224,17 @@ function saveGrade($input) {
   }
   $mdb->begin();
   for ($i = 0; $i < count($obj); $i++) {
-    $str = "REPLACE into 'grades' VALUES (".
-      $obj[$i][0] .  ", " . $obj[$i][1] . ", '". $obj[$i][2] . "', " .
-      $obj[$i][3] .  ", '" . $obj[$i][4] ."')\n";
-    $mdb->query($str);
-    echo $str;
+    $graders = $obj[$i][5];
+    if (findGrader($graders)) {
+      $str = "REPLACE into 'grades' VALUES (".
+        $obj[$i][0] .  ", " . $obj[$i][1] . ", '". $obj[$i][2] . "', " .
+        $obj[$i][3] .  ", '" . $obj[$i][4] ."', '$graders')\n";
+      $mdb->query($str);
+      echo $str;
+    }
+    else {
+      echo "Grader not found\n";
+    }
   }
   $mdb->end();
   if (!$mdb->release()) {
@@ -252,7 +270,7 @@ function getRubric($scanid, $templateid) {
     $results = $db->query("SELECT * FROM grades WHERE scanid = $scanid AND tid = $templateid");
     while ($row = $results->fetchArray()) {
       array_push($res[0],
-        [$row["notes"], $row["value"], $row["rlist"]]);
+        [$row["notes"], $row["value"], $row["rlist"], $row["graders"]]);
     }
   }
   echo json_encode($res);

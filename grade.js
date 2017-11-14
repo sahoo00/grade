@@ -120,6 +120,9 @@ fabric.util.object.extend(fabric.Object.prototype, {
     this.dType = null;
     this.currTData = null;
     this.data = null;
+    this.igrade = null;
+    this.rlist = null;
+    this.graders = null;
   }
 
   ShowID.prototype.addAnnotation = function(obj) {
@@ -240,19 +243,57 @@ fabric.util.object.extend(fabric.Object.prototype, {
     });
   }
 
+  ShowID.prototype.updateGraders = function() {
+    var curr = this;
+    if (curr.tool != "Grade") {
+      return;
+    }
+    var login = getUserLoginData();
+    var res = [];
+    if (curr.graders) {
+      res = curr.graders.split(',');
+    }
+    var found = false;
+    for (var i = 0; i < res.length; i++) {
+      if (res[i] == login[3]) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      res.push(login[3]);
+    }
+    curr.graders = res.join(",");
+  }
+
   ShowID.prototype.saveGrade = function() {
     var curr = this;
     if (curr.tool != "Grade") {
       return;
     }
+    curr.updateGraders();
+    curr.updateGradeInfo();
     var tdata = curr.currTData;
     var notes = d3.select("#inotes").property('value');
-    var res = [[curr.data[0][0], tdata[0], notes, curr.igrade, curr.rlist]];
+    var res = [[curr.data[0][0], tdata[0], notes, curr.igrade,
+    curr.rlist, curr.graders]];
     $.ajax({type: 'POST',
       data: {go: "saveGrade", input: JSON.stringify(res)},
       url: "grade.php",
       success: function(d) { console.log(d); }
     });
+  }
+
+  ShowID.prototype.updateGradeInfo = function() {
+    var curr = this;
+    d3.select("#igrade").html("Grade : " +
+        parseFloat(curr.igrade).toFixed(3));
+    if (curr.tool != "Grade") {
+      return;
+    }
+    if (curr.graders && curr.graders != "") {
+      d3.select("#igrade").append("span").html(" Graders : " + curr.graders);
+    }
   }
 
   ShowID.prototype.calculateGrade = function() {
@@ -278,8 +319,7 @@ fabric.util.object.extend(fabric.Object.prototype, {
     if (total < 0) { total = 0; }
     curr.igrade = total;
     curr.rlist = rlist;
-    d3.select("#igrade").html("Grade : " +
-        parseFloat(curr.igrade).toFixed(3));
+    curr.updateGradeInfo();
   }
 
   ShowID.prototype.updateRubric = function() {
@@ -350,10 +390,10 @@ fabric.util.object.extend(fabric.Object.prototype, {
     }
     if (tdata.length == 6) {
        curr.igrade = tdata[5][1];
-       d3.select("#igrade").html("Grade : " +
-           parseFloat(curr.igrade).toFixed(3));
-       d3.select("#inotes").property("value", tdata[5][0]);
        curr.rlist = tdata[5][2];
+       curr.graders = tdata[5][3];
+       curr.updateGradeInfo();
+       d3.select("#inotes").property("value", tdata[5][0]);
        var res = curr.rlist.split(',');
        var arr = [];
        for (var i = 0; i < tdata[4].length; i++) {
@@ -398,6 +438,9 @@ fabric.util.object.extend(fabric.Object.prototype, {
       curr.tselIndex = obj.selectedIndex;
     }
     curr.currTData = tdata;
+    curr.igrade = null;
+    curr.rlist = null;
+    curr.graders = null;
     if (curr.img && curr.currPage != tdata[3]) {
       curr.img.setSrc(curr.data[tdata[3] - 1][2], function (d) {
         curr.currPage = tdata[3];
@@ -818,7 +861,8 @@ var currScan = null;
 function callShow() {
   var tool = $('#select-tools').val();
   var input = $('#inputtext').val();
-  if (tool == "Template" || tool == "Match" || tool == "Grade") {
+  if (tool == "Template" || tool == "Match" || 
+      tool == "Grade" || tool == "View") {
     if (!currScan) {
       currScan = new ShowID(tool);
     }
@@ -833,7 +877,8 @@ function callShow() {
 function callNext() {
   var tool = $('#select-tools').val();
   var input = $('#inputtext').val();
-  if (tool == "Template" || tool == "Match" || tool == "Grade") {
+  if (tool == "Template" || tool == "Match"
+      || tool == "Grade" || tool == "View") {
     if (currScan && currScan.data) {
       currScan.tool = tool;
       currScan.init(currScan.data[0][0] + 1);

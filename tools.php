@@ -26,7 +26,7 @@ if ($data && $params["op"] == "signup") {
   $USER = new User($params, "registration_callback");
 }
 
-$data = [$USER->username, $USER->email, $USER->role];
+$data = [$USER->username, $USER->email, $USER->role, $USER->userid];
 
 // print_r($params);
 // echo "<br/>";
@@ -59,6 +59,14 @@ if ($USER->authenticated && ($USER->role == "admin" || $USER->role == "grader"))
     <script src="user.js"> </script>
     <script src="grade.js"> </script>
   <script type="text/javascript">
+
+  function getUserLoginData() {
+    var name = "<?php echo $data[0]; ?>";
+    var email = "<?php echo $data[1]; ?>";
+    var role = "<?php echo $data[2]; ?>";
+    var userid = "<?php echo $data[3]; ?>";
+    return [name, email, role, userid];
+  }
 
   function onLoad() {
   }
@@ -122,7 +130,7 @@ if ($USER->authenticated && ($USER->role == "admin" || $USER->role == "grader"))
     <td> &nbsp; &nbsp; </td>
     <td>
 <?php 
-    echo $data[0].":".$data[2];
+    echo $data[0].":".$data[2]."#".$data[3];
 ?>
     |
     <a href="index.php" onclick="return processLogout();"> Logout </a> <br/>
@@ -164,6 +172,7 @@ if ($USER->authenticated && ($USER->role == "admin" || $USER->role == "grader"))
             Select:
       <select id="select-tools">
 <?php if ($USER->role == "admin" || $USER->role == "grader") { ?>
+        <option>View</option>
         <option>Grade</option>
         <option>Match</option>
 <?php } if ($USER->role == "admin") { ?>

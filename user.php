@@ -129,6 +129,9 @@
 		// the user's email address, if logged in.
 		var $email = "";
 
+		// the user's id, if logged in.
+		var $userid = -1;
+
 		// the user's role in the system
 		var $role = "";
 
@@ -191,6 +194,7 @@
 			$this->userdir = ($this->username !=User::GUEST_USER? User::USER_HOME . $this->username : false);
 			$this->email = $this->get_user_email($this->username);
 			$this->role = $this->get_user_role($this->username);
+			$this->userid = $this->get_user_id($this->username);
 
 			// clear database
 			$this->database->commit();
@@ -649,6 +653,17 @@ EOT;
 		function token_hash_password($username, $sha1, $token)
 		{
 			return hash("sha256", $username . $sha1 . $token);
+		}
+
+		/**
+		 * Get a user's ID
+		 */
+		function get_user_id($username)
+		{
+			if($username && $username !="" && $username !=User::GUEST_USER) {
+				$query = "SELECT id FROM graders WHERE username = '$username'";
+				foreach($this->database->query($query) as $data) { return $data["id"]; }}
+			return -1;
 		}
 
 		/**

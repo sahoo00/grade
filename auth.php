@@ -26,7 +26,7 @@ if ($data && $params["op"] == "signup") {
   $USER = new User($params, "registration_callback");
 }
 
-$data = [$USER->username, $USER->email, $USER->role];
+$data = [$USER->username, $USER->email, $USER->role, $USER->userid];
 
 if ($params["op"] == "update") {
   $res = [$USER->result, $USER->authenticated, $data, $USER->info_log, $USER->error_log];
