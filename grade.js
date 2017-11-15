@@ -109,6 +109,102 @@ fabric.util.object.extend(fabric.Object.prototype, {
   annPts: 0,
   annPage: -1 });
 
+const STATE_IDLE = 'idle';
+const STATE_PANNING = 'panning';
+fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
+  // Remember the previous X and Y coordinates for delta calculations
+  let stx;
+  let sty;
+  // Keep track of the state
+  let state = STATE_IDLE;
+  var zoomLevel = 0;
+  var zoomLevelMin = 0;
+  var zoomLevelMax = 4;
+  // We're entering dragmode
+  if (dragMode) {
+    // Discard any active object
+    this.discardActiveObject();
+    // Set the cursor to 'move'
+    this.defaultCursor = 'move';
+    // Loop over all objects and disable events / selectable. We remember its value in a temp variable stored on each object
+    this.forEachObject(function(object) {
+      object.prevEvented = object.evented;
+      object.prevSelectable = object.selectable;
+      object.evented = false;
+      object.selectable = false;
+    });
+    // Remove selection ability on the canvas
+    this.selection = false;
+    // When MouseUp fires, we set the state to idle
+    this.on('mouse:up', function(e) {
+      state = STATE_IDLE;
+    });
+    // When MouseDown fires, we set the state to panning
+    this.on('mouse:down', (e) => {
+      state = STATE_PANNING;
+      var mouse = { x: e.e.clientX, y: e.e.clientY };
+      stx = mouse.x;
+      sty = mouse.y;
+    });
+    // When the mouse moves, and we're panning (mouse down), we continue
+    this.on('mouse:move', (e) => {
+      if (state === STATE_PANNING && e && e.e) {
+        // Calculate deltas
+        let deltaX = 0;
+        let deltaY = 0;
+        var mouse = { x: e.e.clientX, y: e.e.clientY };
+        if (stx) {
+          deltaX = mouse.x - stx;
+        }
+        if (sty) {
+          deltaY = mouse.y - sty;
+        }
+        // Update the last X and Y values
+        stx = mouse.x;
+        sty = mouse.y;
+
+        let delta = new fabric.Point(deltaX, deltaY);
+        this.relativePan(delta);
+        this.trigger('moved');
+      }
+    });
+    var canvas = this;
+    $(this.wrapperEl).on('mousewheel', function (options) {
+      var delta = options.originalEvent.wheelDelta;
+      if (delta != 0) {
+        var pointer = canvas.getPointer(options.e, true);
+        var point = new fabric.Point(pointer.x, pointer.y);
+        if (delta > 0) {
+          if (zoomLevel < zoomLevelMax) {
+            zoomLevel++;
+            canvas.zoomToPoint(point, Math.pow(2, zoomLevel));
+          }
+        } else if (delta < 0) {
+          if (zoomLevel > zoomLevelMin) {
+            zoomLevel--;
+            canvas.zoomToPoint(point, Math.pow(2, zoomLevel));
+          }
+        }
+      }
+      return false;
+    });
+  } else {
+    // When we exit dragmode, we restore the previous values on all objects
+    this.forEachObject(function(object) {
+      object.evented = (object.prevEvented !== undefined) ? object.prevEvented : object.evented;
+      object.selectable = (object.prevSelectable !== undefined) ? object.prevSelectable : object.selectable;
+    });
+    // Reset the cursor
+    this.defaultCursor = 'default';
+    // Remove the event listeners
+    this.off('mouse:up');
+    this.off('mouse:down');
+    this.off('mouse:move');
+    // Restore selection ability on the canvas
+    this.selection = true;
+  }
+};
+
   ShowID.prototype.init_vars = function() {
     this.fc = null;
     this.img = null;
@@ -226,8 +322,17 @@ fabric.util.object.extend(fabric.Object.prototype, {
             curr.addEvents();
             curr.showName(data[0][3]);
             curr.displayRubric();
+	    curr.panZoom();
           }
         });
+  }
+
+  ShowID.prototype.panZoom = function() {
+    var curr = this;
+    var canvas = curr.fc;
+    if (curr.tool == "Grade") {
+      canvas.toggleDragMode(true);
+    }
   }
 
   ShowID.prototype.saveRubric = function() {
