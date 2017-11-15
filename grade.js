@@ -169,7 +169,9 @@ fabric.util.object.extend(fabric.Object.prototype, {
           var canvas = new fabric.Canvas('imgCanvas');
           curr.fc = canvas;
           if (data && data.length > 0) {
-            fabric.Image.fromURL(data[curr.currPage - 1][2], function(oImg) {
+            var url = "grade.php?go=getImage&input=" + 
+              data[curr.currPage - 1][4];
+            fabric.Image.fromURL(url, function(oImg) {
               // scale image down, and flip it, before adding it onto canvas
               oImg.scale(0.5);
               oImg.hasControls = false;
@@ -203,7 +205,9 @@ fabric.util.object.extend(fabric.Object.prototype, {
             .on("click", function(d) {
               var obj = d3.select(this).data();
               if (curr.img && obj[0] > 0 && obj[0] < dataLen + 1) {
-                curr.img.setSrc(data[obj[0] - 1][2], function (d) {
+                var url = "grade.php?go=getImage&input=" + 
+                  data[obj[0] - 1][4];
+                curr.img.setSrc(url, function (d) {
                   curr.currPage = obj[0];
                   curr.hideObjects();
                   canvas.renderAll();
@@ -448,7 +452,8 @@ fabric.util.object.extend(fabric.Object.prototype, {
     curr.rlist = null;
     curr.graders = null;
     if (curr.img && curr.currPage != tdata[3]) {
-      curr.img.setSrc(curr.data[tdata[3] - 1][2], function (d) {
+      var url = "grade.php?go=getImage&input=" + curr.data[tdata[3] - 1][4];
+      curr.img.setSrc(url, function (d) {
         curr.currPage = tdata[3];
         curr.hideObjects();
         curr.fc.renderAll();

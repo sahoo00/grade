@@ -93,6 +93,9 @@ if (array_key_exists("go", $_GET)) {
   if ($auth && strcmp($_GET["go"], "updateRole") == 0) {
     updateRole($_GET["username"], $_GET["role"]);
   }
+  if (strcmp($_GET["go"], "getImage") == 0) {
+    getImage($_GET["input"]);
+  }
 }
 
 function updateRole($username, $role) {
@@ -371,7 +374,8 @@ function getPages($input) {
       $res = [];
       while ($row = $results->fetchArray()) {
         array_push($res,
-          [$row["id"], $row["page"], $row["filename"], $row["studentID"]]);
+          [$row["id"], $row["page"], $row["filename"],
+          $row["studentID"], $row["uniqueID"]]);
       }
       echo json_encode($res);
     }
@@ -389,7 +393,8 @@ function getPages($input) {
   $res = [];
   while ($row = $results->fetchArray()) {
     array_push($res,
-      [$row["id"], $row["page"], $row["filename"], $row["studentID"]]);
+      [$row["id"], $row["page"], $row["filename"],
+      $row["studentID"], $row["uniqueID"]]);
   }
   echo json_encode($res);
 }
@@ -448,6 +453,7 @@ function uploadRoster($file) {
       while (array_key_exists($uniran, $idhash)) {
         $uniran = getToken(10);
       }
+      $idhash[$uniran] = $maxid;
       $query = "INSERT into 'students' VALUES ('$maxid', '$l1[0]', '$l1[1]','$l1[2]', '$l1[3]', NULL, -1, '$uniran')";
       $res = $mdb->query($query);
     }
@@ -502,8 +508,10 @@ function uploadScans($filename, $input) {
   }
   $results = $mdb->query('SELECT * FROM scans');
   $startid = 0;
+  $idhash = [];
   while ($row = $results->fetchArray()) {
     echo $row["id"]."-".$row["page"]."<br/>";
+    $idhash[$row["uniqueID"]] = [$row["id"], $row["page"]];
     if ($row["id"] > $startid) {
       $startid = $row["id"];
     }
@@ -519,14 +527,32 @@ function uploadScans($filename, $input) {
     for ($j = 1; $j <= $params["num"] ; $j++) {
       $n = ($i + $j - 1);
       if ( $n <= $maxid ) {
+        $uniran = getToken(10);
+        while (array_key_exists($uniran, $idhash)) {
+          $uniran = getToken(10);
+        }
+        $idhash[$uniran] = [$startid, $j];
         echo "Linking $startid, $j scans-$n.jpg<br/>\n";
         $query = "INSERT into scans VALUES
-          ($startid, $j, 'tmpdir/scans/scans-$n.jpg', -1)";
+          ($startid, $j, 'tmpdir/scans/scans-$n.jpg', -1, '$uniran')";
         $mdb->query($query);
       }
     }
   }
   if (!$mdb->release()) {
+    return;
+  }
+}
+
+function getImage ($input) {
+  $mdb = new MDB();
+  if (!$mdb->connected) {
+    return;
+  }
+  header("Content-type: image/jpg");
+  $results = $mdb->query("SELECT filename FROM scans WHERE uniqueID = '$input'");
+  while ($row = $results->fetchArray()) {
+    echo file_get_contents($row["filename"]);
     return;
   }
 }

@@ -17,6 +17,7 @@ id INTEGER,
 page INTEGER,
 filename text,
 studentID INTEGER,
+uniqueID text,
 PRIMARY KEY (id, page)
 );
 DROP TABLE params;
