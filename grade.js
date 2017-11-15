@@ -120,6 +120,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
   var zoomLevel = 0;
   var zoomLevelMin = 0;
   var zoomLevelMax = 4;
+  var canvas = this;
   // We're entering dragmode
   if (dragMode) {
     // Discard any active object
@@ -135,6 +136,32 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     });
     // Remove selection ability on the canvas
     this.selection = false;
+    // touch
+    this.on('touch:gesture', function(e) {
+      // Handle zoom only if 2 fingers are touching the screen
+      if (e.e.touches && e.e.touches.length == 2) {
+        // Calculate delta from start scale
+        var delta = e.self.scale;
+        console.log("touch " + delta);
+        // Zoom to pinch point
+        if (delta != 0) {
+          var pointer = canvas.getPointer(e.e, true);
+          var point = new fabric.Point(pointer.x, pointer.y);
+          if (delta > 1) {
+            if (zoomLevel < zoomLevelMax) {
+              zoomLevel++;
+              canvas.zoomToPoint(point, Math.pow(2, zoomLevel));
+            }
+          } else if (delta < 1) {
+            if (zoomLevel > zoomLevelMin) {
+              zoomLevel--;
+              canvas.zoomToPoint(point, Math.pow(2, zoomLevel));
+            }
+          }
+        }
+      }
+      return false;
+    });
     // When MouseUp fires, we set the state to idle
     this.on('mouse:up', function(e) {
       state = STATE_IDLE;
@@ -142,7 +169,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     // When MouseDown fires, we set the state to panning
     this.on('mouse:down', (e) => {
       state = STATE_PANNING;
-      var mouse = { x: e.e.clientX, y: e.e.clientY };
+      var mouse = canvas.getPointer(e.e, true);
       stx = mouse.x;
       sty = mouse.y;
     });
@@ -152,7 +179,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
         // Calculate deltas
         let deltaX = 0;
         let deltaY = 0;
-        var mouse = { x: e.e.clientX, y: e.e.clientY };
+        var mouse = canvas.getPointer(e.e, true);
         if (stx) {
           deltaX = mouse.x - stx;
         }
@@ -164,11 +191,10 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
         sty = mouse.y;
 
         let delta = new fabric.Point(deltaX, deltaY);
-        this.relativePan(delta);
-        this.trigger('moved');
+        canvas.relativePan(delta);
+        canvas.trigger('moved');
       }
     });
-    var canvas = this;
     $(this.wrapperEl).on('mousewheel', function (options) {
       var delta = options.originalEvent.wheelDelta;
       if (delta != 0) {
@@ -200,6 +226,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     this.off('mouse:up');
     this.off('mouse:down');
     this.off('mouse:move');
+    $(this.wrapperEl).on('mousewheel', function (o) { return false; });
     // Restore selection ability on the canvas
     this.selection = true;
   }
@@ -285,12 +312,14 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
           if (data && data.length > 0) {
             dataLen = data.length;
           }
-          var idx = $.map($(Array(dataLen + 3)),function(v, i) { return i; });
+          var idx = $.map($(Array(dataLen + 5)),function(v, i) { return i; });
           var pages = reftable.append("tr").selectAll("td").data(idx)
             .enter().append("td").html(function (d) { 
               if (d == 0) { return "Pages:"; }
               else if (d == dataLen + 1) { return "Name"; }
               else if (d == dataLen + 2) { return "Region"; }
+              else if (d == dataLen + 3) { return "ZoomIn"; }
+              else if (d == dataLen + 4) { return "ZoomOut"; }
               else {
                 return data[d - 1][1]; } })
             .style("width", "50px").style("text-align", "center")
@@ -317,6 +346,8 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
                 curr.startDrawing = true;
                 curr.dType = "Region";
               }
+              else if (obj[0] == dataLen + 3) { curr.zoomIn(); }
+              else if (obj[0] == dataLen + 4) { curr.zoomOut(); }
             });
           if (curr.hasPages()) {
             curr.addEvents();
@@ -327,10 +358,34 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
         });
   }
 
+  ShowID.prototype.zoomIn = function() {
+    var curr = this;
+    var canvas = curr.fc;
+    if (curr.tool == "Grade" || curr.tool == "View") {
+      var zoomLevel = canvas.getZoom();
+      if (zoomLevel < 16) {
+        canvas.setZoom(zoomLevel * 2);
+        canvas.renderAll();
+      }
+    }
+  }
+
+  ShowID.prototype.zoomOut = function() {
+    var curr = this;
+    var canvas = curr.fc;
+    if (curr.tool == "Grade" || curr.tool == "View") {
+      var zoomLevel = canvas.getZoom();
+      if (zoomLevel > 1) {
+        canvas.setZoom(zoomLevel * 0.5);
+        canvas.renderAll();
+      }
+    }
+  }
+
   ShowID.prototype.panZoom = function() {
     var curr = this;
     var canvas = curr.fc;
-    if (curr.tool == "Grade") {
+    if (curr.tool == "Grade" || curr.tool == "View") {
       canvas.toggleDragMode(true);
     }
   }
