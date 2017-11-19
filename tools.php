@@ -84,6 +84,7 @@ if ($USER->authenticated && ($USER->role == "admin" || $USER->role == "grader"))
     return User.processUpdate();
   }
 
+  $( document ).ready(function() {selectExamID();});
   </script>
 
   <style>
@@ -165,8 +166,10 @@ if ($USER->authenticated && ($USER->role == "admin" || $USER->role == "grader"))
     </table>
 <?php if ($USER->role == "admin" || $USER->role == "grader") { ?>
     <h2>Tools </h2>
-    <form action="grade.php" 
-      method="post" ENCTYPE="multipart/form-data">
+    <div id="selectExamAgain"></div>
+    <form id="toolsInput" action="grade.php" 
+      method="post" ENCTYPE="multipart/form-data"
+      style="display:none;">
       <table border="0">
         <tr><td>
             Select:
@@ -182,11 +185,9 @@ if ($USER->authenticated && ($USER->role == "admin" || $USER->role == "grader"))
         <option>Users</option>
 <?php } ?>
       </select>
-          </td><td>
           </td></tr>
         <tr><td>
       Input: <input type="text" id="inputtext" name="input" size="20"/> 
-          </td><td>
       <input type="button" name="Show" value="Show"
             onclick="return callShow();"/>
       <input type="button" name="Next" value="Next"
@@ -197,7 +198,6 @@ if ($USER->authenticated && ($USER->role == "admin" || $USER->role == "grader"))
 <?php if ($USER->role == "admin") { ?>
         <tr><td>
       File: <input id="selectedfile" type="file" name="uploads[]" size="30" multiple=""/>
-          </td><td>
       <input type="submit" value="Upload" onclick="return callUpload();"/>
       <input type="button" value="Clear" onclick="return callClear();"/>
           </td></tr>
@@ -206,7 +206,6 @@ if ($USER->authenticated && ($USER->role == "admin" || $USER->role == "grader"))
     <div class="progress-bar"></div>
     <div class="status">0%</div>
 </div>
-          </td><td>
             <div id="uploadstatus"></div>
           </td></tr>
 <?php } ?>
@@ -214,8 +213,9 @@ if ($USER->authenticated && ($USER->role == "admin" || $USER->role == "grader"))
         </td></tr>
       </table>
     </form>
+    <div id="selectExam"></div>
 <?php } ?>
-    <div id="templateContainer"> </div>
+    <div id="templateContainer"></div>
   </body>
 </html>
 <?php

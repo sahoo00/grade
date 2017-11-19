@@ -1,7 +1,14 @@
 
-var Upload = function (file, tool, input) {
+// Global variables
+var currScan = null;
+var examlist = [];
+var selectedExam = null;
+
+// Uploading tools
+var Upload = function (file, tool, input, exam) {
     this.file = file;
     this.tool = tool;
+    this.exam = exam;
     this.input = input;
 };
 
@@ -23,6 +30,7 @@ Upload.prototype.doUpload = function () {
     formData.append("go", "upload");
     formData.append("tool", this.tool);
     formData.append("input", this.input);
+    formData.append("examid", this.exam[0]);
 
     $.ajax({
         type: "POST",
@@ -73,7 +81,7 @@ function callUpload() {
   var input = $('#inputtext').val();
   if (/^admin/.test(input) && (tool == "Roster" || tool == "Upload Scans")) {
     for (var i = 0; i < files.length; i++) {
-      var upload = new Upload(files[i], tool, input);
+      var upload = new Upload(files[i], tool, input, selectedExam);
 
       // maby check size or type here with upload.getSize() and upload.getType()
 
@@ -94,8 +102,9 @@ function callClear() {
 }
 
 var ident = function (d) { return d; };
-function ShowID(tool) {
+function ShowID(tool, exam) {
   this.tool = tool;
+  this.exam = exam;
   this.fc = null;
   this.img = null;
   this.tselIndex = null;
@@ -270,7 +279,8 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     curr.init_vars();
     curr.input = input;
 
-    d3.json("grade.php?go=getPages&input=" + input,
+    d3.json("grade.php?go=getPages&input=" + input +
+        "&examid=" + curr.exam[0],
         function (data) {
           curr.data = data;
           d3.select("#templateContainer").html("");
@@ -293,7 +303,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
           curr.fc = canvas;
           if (data && data.length > 0) {
             var url = "grade.php?go=getImage&input=" + 
-              data[curr.currPage - 1][4];
+              data[curr.currPage - 1][4] + "&examid=" + curr.exam[0];
             fabric.Image.fromURL(url, function(oImg) {
               // scale image down, and flip it, before adding it onto canvas
               oImg.scale(0.5);
@@ -331,7 +341,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
               var obj = d3.select(this).data();
               if (curr.img && obj[0] > 0 && obj[0] < dataLen + 1) {
                 var url = "grade.php?go=getImage&input=" + 
-                  data[obj[0] - 1][4];
+                  data[obj[0] - 1][4] + "&examid=" + curr.exam[0];
                 curr.img.setSrc(url, function (d) {
                   curr.currPage = obj[0];
                   curr.hideObjects();
@@ -402,7 +412,8 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
         tdata[4][i][3], tdata[4][i][4]]);
     }
     $.ajax({type: 'POST',
-      data: {go: "saveRubric", input: JSON.stringify(res)},
+      data: {go: "saveRubric", input: JSON.stringify(res),
+        examid: curr.exam[0]},
       url: "grade.php",
       success: function(d) { console.log(d); }
     });
@@ -443,7 +454,8 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     var res = [[curr.data[0][0], tdata[0], notes, curr.igrade,
     curr.rlist, curr.graders]];
     $.ajax({type: 'POST',
-      data: {go: "saveGrade", input: JSON.stringify(res)},
+      data: {go: "saveGrade", input: JSON.stringify(res),
+        examid: curr.exam[0]},
       url: "grade.php",
       success: function(d) { console.log(d); }
     });
@@ -606,13 +618,20 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
       tdata = tsel.data()[0];
       var obj = d3.select("#tsel").node().options;
       curr.tselIndex = obj.selectedIndex;
+      if (curr.tselIndex == -1) {
+        tdata = null;
+      }
+    }
+    if (tdata == null) {
+      return;
     }
     curr.currTData = tdata;
     curr.igrade = null;
     curr.rlist = null;
     curr.graders = null;
     if (curr.img && curr.currPage != tdata[3]) {
-      var url = "grade.php?go=getImage&input=" + curr.data[tdata[3] - 1][4];
+      var url = "grade.php?go=getImage&input=" + curr.data[tdata[3] - 1][4] +
+        "&examid=" + curr.exam[0];
       curr.img.setSrc(url, function (d) {
         curr.currPage = tdata[3];
         curr.hideObjects();
@@ -636,7 +655,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     }
     d3.select("#rlist").append("div").attr("id", "irlist");
     d3.json("grade.php?go=getRubric&scanid=" + curr.data[0][0] + 
-    "&templateid=" + tdata[0],
+    "&templateid=" + tdata[0] + "&examid=" + curr.exam[0],
         function (data) {
           curr.currTData = tdata = data[0];
           curr.updateRubric();
@@ -648,7 +667,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     if (curr.tool != "Grade" && curr.tool != "View") {
       return;
     }
-    d3.json("grade.php?go=getTemplateID",
+    d3.json("grade.php?go=getTemplateID" + "&examid=" + curr.exam[0],
         function (data) {
           d3.select("#objlist").html("");
           var objData = ["Prev", data, "Next"];
@@ -731,7 +750,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
       .on("click", function(d) {
         var obj = d3.select(this).data();
         d3.json("grade.php?go=matchStudent&scanid=" + curr.data[0][0] +
-            "&studentid=" + obj[0][0], ident);
+            "&studentid=" + obj[0][0] + "&examid=" + curr.exam[0], ident);
         callback(obj);
       });
   }
@@ -746,7 +765,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
         .enter().append("td").html(ident);
     }
     else {
-      d3.json("grade.php?go=getName&input=" + id,
+      d3.json("grade.php?go=getName&input=" + id + "&examid=" + curr.exam[0],
           function (data) {
             ntable.append("tr").selectAll("td").data(data)
               .enter().append("td").html(ident);
@@ -761,7 +780,8 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
         .attr("type", "button").attr("value", "Search")
         .on("click", function() {
           var str = d3.select("#namesearch").node().value;
-          d3.json("grade.php?go=searchName&input=" + str,
+          d3.json("grade.php?go=searchName&input=" + str + 
+              "&examid=" + curr.exam[0],
               function (data) {
                 var cols = ["ID", "lastName", "firstName", "userName",
                 "studentID"];
@@ -946,7 +966,8 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
       });
       var res = arr;
       $.ajax({type: 'POST',
-        data: {go: "saveTemplate", input: JSON.stringify(res)},
+        data: {go: "saveTemplate", input: JSON.stringify(res),
+            examid: curr.exam[0]},
         url: "grade.php"
           });
     }
@@ -954,7 +975,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
 
   ShowID.prototype.callLoad = function() {
     var curr = this;
-    d3.json('grade.php?go=getTemplate',
+    d3.json('grade.php?go=getTemplate' + "&examid=" + curr.exam[0],
         function (error,data) {
           var arr = data;
           if (!arr) { return; }
@@ -1030,16 +1051,16 @@ function showUsers() {
       });
 }
 
-var currScan = null;
 function callShow() {
   var tool = $('#select-tools').val();
   var input = $('#inputtext').val();
   if (tool == "Template" || tool == "Match" || 
       tool == "Grade" || tool == "View") {
     if (!currScan) {
-      currScan = new ShowID(tool);
+      currScan = new ShowID(tool, selectedExam);
     }
     currScan.tool = tool;
+    currScan.exam = selectedExam;
     currScan.init(input);
   }
   if (tool == "Users") {
@@ -1070,3 +1091,106 @@ function callSave() {
     currScan.saveGrade();
   }
 }
+
+function updateList() {
+  var login = getUserLoginData();
+  var sel = d3.select("#examlist").selectAll("li").data(examlist);
+  var e = sel.enter().append("li").selectAll("span")
+    .data(function (d) { return [d[1], "  Pages: ", d[4]]; })
+    .enter().append("span")
+    .html(function (d) { return d; });
+  d3.select("#examlist").selectAll("li").each(function (d, i) {
+    var s = d3.select(this);
+    s.append("span").text(" ");
+    s.append("button").text("Select")
+      .on("click", function() {
+        selectedExam = d;
+        d3.select("#selectExam").html("");
+        d3.select("#selectExamAgain").html("");
+        d3.select("#selectExamAgain").append("span").html(d[1]);
+        d3.select("#selectExamAgain").append("span").html("  ");
+        d3.select("#selectExamAgain").append("button")
+          .text("Select Another Exam")
+          .on("click", function() {
+            d3.select("#templateContainer").html("");
+            d3.select("#toolsInput").attr("style", "display:none;")
+            selectExamID();
+          });
+        d3.select("#toolsInput").attr("style", "display:block;");
+      });
+  });
+  if (login[2] == "admin") {
+    e.filter(function (d, i) { return i == 0; })
+      .each(function (d) {
+        var cell = d3.select(this);
+        var obj = d3.select(this.parentNode).data();
+        $(cell.node()).editable({
+          type: 'text',
+          placement: 'right',
+          defaultValue: 'Unknown',
+          tpl: "<input type='text' style='width: 100px'>",
+          success: function(response, newValue) {
+            obj[0][1] = newValue;
+          }
+        });
+      });
+
+    e.filter(function (d, i) { return i == 2; })
+      .each(function (d) {
+        var cell = d3.select(this);
+        var obj = d3.select(this.parentNode).data();
+        $(cell.node()).editable({
+          type: 'text',
+          placement: 'right',
+          defaultValue: '1',
+          tpl: "<input type='text' style='width: 50px'>",
+          success: function(response, newValue) {
+            obj[0][4] = newValue;
+          }
+        });
+      });
+  }
+  sel.exit().remove();
+}
+
+function selectExamID() {
+  d3.json("grade.php?go=getExams", function (data) {
+    examlist = data;
+    var sel = d3.select("#selectExam");
+    var login = getUserLoginData();
+    sel.html("");
+    var ti = sel.append("h3").html("List of Exams: ");
+    if (login[2] == "admin") {
+      ti.append("span").html(" (+) ")
+        .on('mouseover', function(){
+          d3.select(this).style('background-color', 'gray');
+        })
+      .on('mouseout', function(){
+        d3.select(this).style('background-color', 'white');
+      })
+      .on('click', function() {
+        var id = examlist.length;
+        var dir = "tmpdir/exam-" + id;
+        examlist.push([id, "New Exam", dir + "/students.db",
+            dir + "/scans", 1, login[3]]);
+        updateList();
+      });
+    }
+    sel.append("ol").attr("id", "examlist");
+    updateList();
+    if (login[2] == "admin") {
+      sel.append("br");
+      sel.append("button").attr("class", "btn btn-primary")
+        .text("Submit")
+        .on("click", function() {
+          $.ajax({type: 'POST',
+            data: {go: "manageExams", input: JSON.stringify(examlist),
+              action: "replace"},
+              url: "grade.php",
+              success: function(d) { console.log(d); }
+          });
+        });
+    }
+  });
+}
+

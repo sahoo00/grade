@@ -22,11 +22,20 @@ if ($USER->role == 'user') {
 $target_dir = "tmpdir/";
 $file = "";
 
+$examid = null;
+if (array_key_exists("examid", $_GET)) {
+  $examid = $_GET["examid"];
+}
+if (array_key_exists("examid", $_POST)) {
+  $examid = $_POST["examid"];
+}
+
 if ($auth && array_key_exists("uploads", $_FILES)) {
   $filename = $_FILES['uploads']['name'];
   $tmpfilename = $_FILES['uploads']['tmp_name'];
   $target_path = $target_dir . basename($filename);
   $isFile = is_uploaded_file($tmpfilename);
+  print_r($_FILES['uploads']);
   if ($isFile) {
     move_uploaded_file($tmpfilename, $target_path);
     $file = $target_path;
@@ -54,6 +63,9 @@ if ($auth && array_key_exists("go", $_POST)) {
   }
   if (strcmp($_POST["go"], "saveRubric") == 0) {
     saveRubric($_POST["input"]);
+  }
+  if (strcmp($_POST["go"], "manageExams") == 0) {
+    manageExams($_POST["action"], $_POST["input"]);
   }
 }
 
@@ -96,6 +108,106 @@ if (array_key_exists("go", $_GET)) {
   if (strcmp($_GET["go"], "getImage") == 0) {
     getImage($_GET["input"]);
   }
+  if (strcmp($_GET["go"], "getExams") == 0) {
+    getExams();
+  }
+}
+
+function manageExams($action, $input) {
+  $res = urldecode($input);
+  $obj = json_decode($res);
+  $db = new SQLite3('tmpdir/exams.db');
+  for ($i = 0; $i < count($obj); $i++) {
+    $graders = $obj[$i][5];
+    $dbfile = $obj[$i][2];
+    $scandir = $obj[$i][3];
+    if (!file_exists($scandir)) {
+      mkdir($scandir, 0777, true);
+      $list = explode('/', $scandir);
+      $dir = null;
+      foreach ($list as $d) {
+        if ($dir == null) {
+          $dir = $d;
+        }
+        else {
+          $dir = $dir . "/" . $d;
+        }
+        chmod($dir, 0777);
+      }
+    }
+    if (!file_exists($dbfile)) {
+      system("sqlite3 $dbfile < schemas.sql");
+      chmod($dbfile, 0777);
+    }
+    //rmdir($scandir);
+    // Grader check not enforced because it records the grader that started the
+    // exam
+    $str = "REPLACE into 'exams' VALUES (".
+      $obj[$i][0] .  ", '" . $obj[$i][1] . "', '". $obj[$i][2] . "', '" .
+      $obj[$i][3] . "', '". $obj[$i][4] ."', '$graders')\n";
+    $db->query($str);
+    echo $str;
+  }
+}
+
+function getDbFile($id) {
+  $db = new SQLite3('tmpdir/exams.db');
+  $results = $db->query("SELECT dbfile FROM exams where id = $id");
+  while ($row = $results->fetchArray()) {
+    return $row["dbfile"];
+  }
+  return null;
+}
+
+function getAnnFile($id) {
+  $dbfile = getDbFile($id);
+  if ($dbfile != null) {
+    return str_replace("students.db", "ann-list.json", $dbfile);
+  }
+  return null;
+}
+
+function getScanDir($id) {
+  $db = new SQLite3('tmpdir/exams.db');
+  $results = $db->query("SELECT scandir FROM exams where id = $id");
+  while ($row = $results->fetchArray()) {
+    return $row["scandir"];
+  }
+  return null;
+}
+
+function getExamPages($id) {
+  $db = new SQLite3('tmpdir/exams.db');
+  $results = $db->query("SELECT pages FROM exams where id = $id");
+  while ($row = $results->fetchArray()) {
+    return $row["pages"];
+  }
+  return null;
+}
+
+function getExams() {
+  $res = [];
+  $db = new SQLite3('tmpdir/exams.db');
+  $results = $db->query("SELECT * FROM exams");
+  while ($row = $results->fetchArray()) {
+    array_push($res,
+      [$row["id"], $row["name"], $row["dbfile"], $row["scandir"],
+        $row["pages"], $row["graders"]]);
+  }
+  echo json_encode($res);
+}
+
+function getImage ($input) {
+  $mdb = new MDB();
+  if (!$mdb->connected) {
+    return;
+  }
+  header("Content-type: image/jpg");
+  $results = $mdb->query("SELECT filename FROM scans WHERE uniqueID = '$input'");
+  while ($row = $results->fetchArray()) {
+    echo file_get_contents($row["filename"]);
+    return;
+  }
 }
 
 function updateRole($username, $role) {
@@ -120,8 +232,13 @@ function getUsers() {
 }
 
 function getDB() {
-  $db = new SQLite3('tmpdir/students.db');
-  return $db;
+  global $examid;
+  $dbfile = getDbFile($examid);
+  if ($dbfile != null) {
+    $db = new SQLite3($dbfile);
+    return $db;
+  }
+  return null;
 }
 
 class MDB {
@@ -327,6 +444,7 @@ function getName($input) {
 }
 
 function saveTemplate($input) {
+  global $examid;
   $mdb = new MDB();
   if (!$mdb->connected) {
     return;
@@ -335,7 +453,10 @@ function saveTemplate($input) {
     return;
   }
   $res = urldecode($input);
-  $file = "tmpdir/ann-list.json";
+  $file = getAnnFile($examid);
+  if ($file == null) {
+    return;
+  }
   $fp = fopen($file, 'w');
   fwrite($fp, $res);
   fclose($fp);
@@ -355,7 +476,8 @@ function saveTemplate($input) {
 }
 
 function getTemplate() {
-  $file = "tmpdir/ann-list.json";
+  global $examid;
+  $file = getAnnFile($examid);
   echo file_get_contents($file);
 }
 
@@ -478,7 +600,9 @@ function getParam($str) {
 }
 
 function getScanNum() {
-  $handle = opendir("tmpdir/scans/");
+  global $examid;
+  $scandir = getScanDir($examid);
+  $handle = opendir($scandir);
   $maxid = 0;
   while ($file = readdir($handle)){
     if ($file !== '.' && $file !== '..'){
@@ -493,12 +617,14 @@ function getScanNum() {
 }
 
 function uploadScans($filename, $input) {
-  $params = getParam($input);
+  global $examid;
+  $scandir = getScanDir($examid);
+  $num = getExamPages($examid);
   $maxid = getScanNum();
   $maxid++;
   $start = $maxid;
-  echo "Converting to scans-$start.jpg<br/>\n";
-  $cmd = "convert -quality 100 -density 200 '$filename' -scene $maxid 'tmpdir/scans/scans-%d.jpg'";
+  echo "Converting $filename to scans-$start.jpg<br/>\n";
+  $cmd = "convert -quality 100 -density 200 '$filename' -scene $maxid '$scandir/scans-%d.jpg'";
   system($cmd);
   $maxid = getScanNum();
   echo "Done Converting to scans-$maxid.jpg<br/>\n";
@@ -519,12 +645,9 @@ function uploadScans($filename, $input) {
   if (!$mdb->lock()) {
     return;
   }
-  $query = "INSERT into params(paramKey, valueInt) VALUES
-    ('num', ".$params["num"].")";
-  $mdb->query($query);
-  for ($i = $start; $i <= $maxid; $i = $i + $params["num"]) {
+  for ($i = $start; $i <= $maxid; $i = $i + $num) {
     $startid ++;
-    for ($j = 1; $j <= $params["num"] ; $j++) {
+    for ($j = 1; $j <= $num ; $j++) {
       $n = ($i + $j - 1);
       if ( $n <= $maxid ) {
         $uniran = getToken(10);
@@ -534,25 +657,12 @@ function uploadScans($filename, $input) {
         $idhash[$uniran] = [$startid, $j];
         echo "Linking $startid, $j scans-$n.jpg<br/>\n";
         $query = "INSERT into scans VALUES
-          ($startid, $j, 'tmpdir/scans/scans-$n.jpg', -1, '$uniran')";
+          ($startid, $j, '$scandir/scans-$n.jpg', -1, '$uniran')";
         $mdb->query($query);
       }
     }
   }
   if (!$mdb->release()) {
-    return;
-  }
-}
-
-function getImage ($input) {
-  $mdb = new MDB();
-  if (!$mdb->connected) {
-    return;
-  }
-  header("Content-type: image/jpg");
-  $results = $mdb->query("SELECT filename FROM scans WHERE uniqueID = '$input'");
-  while ($row = $results->fetchArray()) {
-    echo file_get_contents($row["filename"]);
     return;
   }
 }

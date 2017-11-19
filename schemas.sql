@@ -20,14 +20,6 @@ studentID INTEGER,
 uniqueID text,
 PRIMARY KEY (id, page)
 );
-DROP TABLE params;
-CREATE TABLE params 
-(
-paramKey text,
-valueText text,
-valueInt INTEGER,
-PRIMARY KEY (paramKey)
-);
 DROP TABLE template;
 CREATE TABLE template 
 (
