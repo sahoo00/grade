@@ -58,6 +58,9 @@ if ($auth && array_key_exists("go", $_POST)) {
   if (strcmp($_POST["go"], "saveTemplate") == 0) {
     saveTemplate($_POST["input"]);
   }
+  if (strcmp($_POST["go"], "saveTotal") == 0) {
+    saveTotal($_POST["scanid"]);
+  }
   if (strcmp($_POST["go"], "saveGrade") == 0) {
     saveGrade($_POST["input"]);
   }
@@ -111,6 +114,32 @@ if (array_key_exists("go", $_GET)) {
   if (strcmp($_GET["go"], "getExams") == 0) {
     getExams();
   }
+  if (strcmp($_GET["go"], "getTotal") == 0) {
+    getTotal($_GET["scanid"]);
+  }
+}
+
+function getTotal($scanid) {
+  $db = getDB();
+  $total = -1;
+  $str = "SELECT SUM(value) from grades WHERE scanid = $scanid";
+  $results = $db->query($str);
+  while ($row = $results->fetchArray()) {
+    $total = $row[0];
+    break;
+  }
+  $final = -1;
+  $str = "SELECT SUM(template.value) from template inner join grades on
+    template.id = grades.tid and grades.scanid = $scanid";
+  $results = $db->query($str);
+  while ($row = $results->fetchArray()) {
+    $final = $row[0];
+    break;
+  }
+  if ($total == null) { $total = 0; }
+  if ($final == null) { $final = 0; }
+  $res = [$total, $final];
+  echo json_encode($res);
 }
 
 function manageExams($action, $input) {
@@ -306,6 +335,59 @@ class MDB {
     }
     return $result;
   }
+}
+
+function saveTotal($scanid) {
+  $mdb = new MDB();
+  if (!$mdb->connected) {
+    echo json_encode([0, "database not connected"]);
+    return;
+  }
+  $studentID = -1;
+  $str = "SELECT studentID from scans where id = $scanid";
+  $results = $mdb->query($str);
+  while ($row = $results->fetchArray()) {
+    $studentID = $row["studentID"];
+    break;
+  }
+  if ($studentID == -1) {
+    echo json_encode([0, "Student ID not matched"]);
+    return;
+  }
+  if (!$mdb->lock()) {
+    echo json_encode([0, "Couldn't get lock"]);
+    return;
+  }
+  $res = [1, "Total updated"];
+  if ($mdb->begin() == FALSE) {
+    $res = [0, "Couldn't begin transaction"];
+  }
+  else {
+    $total = -1;
+    $str = "SELECT SUM(value) from grades WHERE scanid = $scanid";
+    $results = $mdb->query($str);
+    while ($row = $results->fetchArray()) {
+      $total = $row[0];
+      break;
+    }
+    if ($total != -1) {
+      $str = "UPDATE students SET grade = $total WHERE id = $studentID";
+      if ($mdb->query($str) == FALSE) {
+        $res = [0, "Couldn't update total"];
+      }
+    }
+    if ($res[0] == 1) {
+      if ($mdb->end() == FALSE) {
+        $res = [0, "Couldn't end transaction"];
+      }
+    }
+  }
+  if (!$mdb->release()) {
+    $res = [0, "Couldn't release lock"];
+    echo json_encode($res);
+    return;
+  }
+  echo json_encode($res);
 }
 
 function saveRubric($input) {
@@ -519,6 +601,7 @@ function saveTemplate($input) {
   }
   $res = urldecode($input);
   $file = getAnnFile($examid);
+  echo "$file\n";
   if ($file == null) {
     return;
   }
@@ -533,6 +616,7 @@ function saveTemplate($input) {
       $str = "INSERT into 'template' VALUES ($i, '" . $obj[$i][1] .
         "', " . $obj[$i][3] . ", " . $obj[$i][2] . ")";
       $mdb->query($str);
+      echo "$str\n";
     }
   }
   if (!$mdb->release()) {

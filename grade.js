@@ -518,6 +518,41 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     });
   }
 
+  ShowID.prototype.saveTotal = function() {
+    var curr = this;
+    if (curr.tool != "Grade") {
+      return;
+    }
+    $.ajax({type: 'POST',
+      data: {go: "saveTotal", scanid: curr.data[0][0],
+        examid: curr.exam[0]},
+      url: "grade.php",
+      success: function(d) {
+        var st = JSON.parse(d);
+        if (st && st[0] == 1) {
+          d3.select("#gradeStatus").append("br");
+          d3.select("#gradeStatus").append("span").html(st[1]);
+          d3.select("#gradeStatus").append("text").html("&radic;");
+        }
+        if (st && st[0] == 0) {
+          d3.select("#gradeStatus").append("br");
+          d3.select("#gradeStatus").append("span")
+            .attr("class", "errorInfo").html(st[1]);
+        }
+      }
+    });
+  }
+
+  ShowID.prototype.updateTotalGradeInfo = function() {
+    var curr = this;
+    d3.json("grade.php?go=getTotal&scanid=" + curr.data[0][0] + 
+      "&examid=" + curr.exam[0],
+        function (data) {
+          d3.select("#itotal").html( parseFloat(data[0]).toFixed(3)
+            + "/" + parseFloat(data[1]).toFixed(3) );
+        });
+  }
+
   ShowID.prototype.updateGradeInfo = function() {
     var curr = this;
     d3.select("#igrade").html("Grade : " +
@@ -628,6 +663,8 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
           curr.calculateGrade();
           curr.saveRubric();
           curr.saveGrade();
+          curr.saveTotal();
+          curr.updateTotalGradeInfo();
         });
     }
     if (tdata.length == 6) {
@@ -730,6 +767,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     d3.json("grade.php?go=getTemplateID" + "&examid=" + curr.exam[0],
         function (data) {
           d3.select("#objlist").html("");
+          d3.select("#objlist").append("div").attr("id", "itotal");
           var objData = ["Prev", data, "Next"];
           var tbl = d3.select("#objlist").append("table").attr("border", 0);
           d3.select("#objlist").append("br");
@@ -788,6 +826,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
             }
             curr.gradeOneRegion(data[curr.tselIndex]);
           }
+          curr.updateTotalGradeInfo();
         });
   }
 
@@ -1045,7 +1084,8 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
       $.ajax({type: 'POST',
         data: {go: "saveTemplate", input: JSON.stringify(res),
             examid: curr.exam[0]},
-        url: "grade.php"
+        url: "grade.php",
+        success: function(d) { console.log(d); }
           });
     }
   }

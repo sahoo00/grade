@@ -1,19 +1,19 @@
 #!/bin/bash
 
-rm -fr tmpdir/exam-0/scans
+#rm -fr tmpdir/exam-0/scans
 #rm -fr tmpdir
 
-mkdir -p tmpdir/exam-0/scans
-chmod gao+rwx tmpdir
-chmod gao+rwx tmpdir/exam-0
-chmod gao+rwx tmpdir/exam-0/scans
-
-cp htpasswd tmpdir/.htpasswd
-cp htaccess tmpdir/.htaccess
-chmod 444 tmpdir/.ht*
-
-sqlite3 tmpdir/exam-0/students.db < schemas.sql
-chmod gao+rw tmpdir/exam-0/students.db
+#mkdir -p tmpdir/exam-0/scans
+#chmod gao+rwx tmpdir
+#chmod gao+rwx tmpdir/exam-0
+#chmod gao+rwx tmpdir/exam-0/scans
+#
+#cp htpasswd tmpdir/.htpasswd
+#cp htaccess tmpdir/.htaccess
+#chmod 444 tmpdir/.ht*
+#
+#sqlite3 tmpdir/exam-0/students.db < schemas.sql
+#chmod gao+rw tmpdir/exam-0/students.db
 
 #sqlite3 tmpdir/graders.db < graders.sql
 #chmod gao+rw tmpdir/graders.db
@@ -21,11 +21,15 @@ chmod gao+rw tmpdir/exam-0/students.db
 #sqlite3 tmpdir/exams.db < exams.sql
 #chmod gao+rw tmpdir/exams.db
 
-php-cgi grade.php go=upload tool="Upload Scans" file="scans-1.PDF" \
-  input="num=2" examid=0
-php-cgi grade.php go=upload tool=Roster file="students.txt" examid=0
-
-sqlite3 tmpdir/exam-0/students.db < print.sql 
+#php-cgi grade.php go=upload tool="Upload Scans" file="scans-1.PDF" \
+#  input="num=2" examid=0
+#php-cgi grade.php go=upload tool=Roster file="students.txt" examid=0
+#
+#sqlite3 tmpdir/exam-0/students.db < print.sql 
 
 # To update autoincrement sequence
 # UPDATE SQLITE_SEQUENCE SET SEQ=1 WHERE NAME='graders';
+
+php-cgi grade.php go=upload tool=Roster file="tmpdir/roster.txt" examid=1
+php-cgi grade.php go=upload tool=Roster file="tmpdir/roster.txt" examid=2
+
