@@ -268,6 +268,18 @@ class MDB {
      return $this->db->query($str);
   }
 
+  public function exec($str) {
+     return $this->db->exec($str);
+  }
+
+  public function changes() {
+     return $this->db->changes();
+  }
+
+  public function errorInfo() {
+     return $this->db->lastErrorMsg();
+  }
+
   public function begin() {
     $str = "BEGIN TRANSACTION";
     return $this->query($str);
@@ -301,26 +313,42 @@ function saveRubric($input) {
   $obj = json_decode($res);
   $mdb = new MDB();
   if (!$mdb->connected) {
+    echo json_encode([0, "database not connected"]);
     return;
   }
   if (!$mdb->lock()) {
+    echo json_encode([0, "Couldn't get lock"]);
     return;
   }
-  $mdb->begin();
-  for ($i = 0; $i < count($obj); $i++) {
-    $graders = $obj[$i][5];
-    // Grader check not enforced because it records the grader that started the
-    // rubric.
-    $str = "REPLACE into 'rubric' VALUES (".
-      $obj[$i][0] .  ", " . $obj[$i][1] . ", '". $obj[$i][2] . "', " .
-      $obj[$i][3] . ", '". $obj[$i][4] ."', '$graders')\n";
-    $mdb->query($str);
-    echo $str;
+  $res = [1, "Rubric updated"];
+  if ($mdb->begin() == FALSE) {
+    $res = [0, "Couldn't begin transaction"];
   }
-  $mdb->end();
+  else {
+    for ($i = 0; $i < count($obj); $i++) {
+      $graders = $obj[$i][5];
+      // Grader check not enforced because it records the grader
+      // that started the rubric.
+      $str = "REPLACE into 'rubric' VALUES (".
+        $obj[$i][0] .  ", " . $obj[$i][1] . ", '". $obj[$i][2] . "', " .
+        $obj[$i][3] . ", '". $obj[$i][4] ."', '$graders')\n";
+      if ($mdb->query($str) == FALSE) {
+        $res = [0, "Couldn't update rubric"];
+        break;
+      }
+    }
+    if ($res[0] == 1) {
+      if ($mdb->end() == FALSE) {
+        $res = [0, "Couldn't end transaction"];
+      }
+    }
+  }
   if (!$mdb->release()) {
+    $res = [0, "Couldn't release lock"];
+    echo json_encode($res);
     return;
   }
+  echo json_encode($res);
 }
 
 function findGrader($graders) {
@@ -340,29 +368,46 @@ function saveGrade($input) {
   $obj = json_decode($res);
   $mdb = new MDB();
   if (!$mdb->connected) {
+    echo json_encode([0, "database not connected"]);
     return;
   }
   if (!$mdb->lock()) {
+    echo json_encode([0, "Couldn't get lock"]);
     return;
   }
-  $mdb->begin();
-  for ($i = 0; $i < count($obj); $i++) {
-    $graders = $obj[$i][5];
-    if (findGrader($graders)) {
-      $str = "REPLACE into 'grades' VALUES (".
-        $obj[$i][0] .  ", " . $obj[$i][1] . ", '". $obj[$i][2] . "', " .
-        $obj[$i][3] .  ", '" . $obj[$i][4] ."', '$graders')\n";
-      $mdb->query($str);
-      echo $str;
+  $res = [1, "Grades updated"];
+  if ($mdb->begin() == FALSE) {
+    $res = [0, "Couldn't begin transaction"];
+  }
+  else {
+    for ($i = 0; $i < count($obj); $i++) {
+      $graders = $obj[$i][5];
+      if (findGrader($graders)) {
+        $str = "REPLACE into 'grades' VALUES (".
+          $obj[$i][0] .  ", " . $obj[$i][1] . ", '". $obj[$i][2] . "', " .
+          $obj[$i][3] .  ", '" . $obj[$i][4] ."', '$graders')\n";
+        if ($mdb->query($str) == FALSE) {
+          $res = [0, "Couldn't update grades"];
+          break;
+        }
+      }
+      else {
+        $res = [0, "Grader not found"];
+        break;
+      }
     }
-    else {
-      echo "Grader not found\n";
+    if ($res[0] == 1) {
+      if ($mdb->end() == FALSE) {
+        $res = [0, "Couldn't end transaction"];
+      }
     }
   }
-  $mdb->end();
   if (!$mdb->release()) {
+    $res = [0, "Couldn't release lock"];
+    echo json_encode($res);
     return;
   }
+  echo json_encode($res);
 }
 
 function getTemplateID() {
@@ -400,23 +445,43 @@ function getRubric($scanid, $templateid) {
   echo json_encode($res);
 }
 
+function findStudent($mdb, $studentid) {
+  $results = $mdb->query("SELECT id FROM scans WHERE studentID = $studentid");
+  while ($row = $results->fetchArray()) {
+    return true;
+  }
+  return false;
+}
+
 function matchStudent($scanid, $studentid) {
   $mdb = new MDB();
   if (!$mdb->connected) {
+    echo json_encode([0, "database not connected"]);
+    return;
+  }
+  if ($studentid > 0 && findStudent($mdb, $studentid)) {
+    echo json_encode([0, "Duplicate entry not allowed"]);
     return;
   }
   if (!$mdb->lock()) {
+    echo json_encode([0, "Couldn't get lock"]);
     return;
   }
-  $results = $mdb->query("UPDATE scans SET studentID = $studentid WHERE id = $scanid");
-  echo json_encode([]);
+  $results = $mdb->exec("UPDATE scans SET studentID = $studentid WHERE id = $scanid");
+  $res = [0, "Couldn't match student"];
+  if ($results) {
+    $res = [1, "Updated scans"];
+  }
   if (!$mdb->release()) {
+    $res = [0, "Couldn't release lock"];
+    echo json_encode($res);
     return;
   }
+  echo json_encode($res);
 }
 
 function searchName($input) {
-  $res = [];
+  $res = [[-1, "Unknown", "", "", ""]];
   if ($input != "") {
     $db = getDB();
     $results = $db->query("SELECT * FROM students WHERE lastName LIKE '%$input%' OR firstName LIKE '%$input%' LIMIT 5");
@@ -482,9 +547,19 @@ function getTemplate() {
 }
 
 function getPages($input) {
+  global $examid;
+  $numPages = getExamPages($examid);
+  $db = getDB();
+  $total = 0;
+  $results = $db->query("SELECT COUNT(id) FROM scans");
+  while ($row = $results->fetchArray()) {
+    if ($numPages) {
+      $total = $row[0] / $numPages;
+    }
+    break;
+  }
   if (strncmp($input, "View:", 5) == 0) {
     $urid = substr($input, 5);
-    $db = getDB();
     $results = $db->query("SELECT * FROM students WHERE uniqueID = '$urid'");
     $res = [];
     while ($row = $results->fetchArray()) {
@@ -497,7 +572,7 @@ function getPages($input) {
       while ($row = $results->fetchArray()) {
         array_push($res,
           [$row["id"], $row["page"], $row["filename"],
-          $row["studentID"], $row["uniqueID"]]);
+          $row["studentID"], $row["uniqueID"], $total]);
       }
       echo json_encode($res);
     }
@@ -510,13 +585,12 @@ function getPages($input) {
       $num = $matches[0][0];
     }
   }
-  $db = getDB();
   $results = $db->query("SELECT * FROM scans WHERE id = $num");
   $res = [];
   while ($row = $results->fetchArray()) {
     array_push($res,
       [$row["id"], $row["page"], $row["filename"],
-      $row["studentID"], $row["uniqueID"]]);
+      $row["studentID"], $row["uniqueID"], $total]);
   }
   echo json_encode($res);
 }

@@ -284,6 +284,8 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
         function (data) {
           curr.data = data;
           d3.select("#templateContainer").html("");
+          var dinfo = d3.select("#templateContainer").append("div")
+            .attr("id", "docinfo");
           var reftable = d3.select("#templateContainer").append("table")
             .attr("id", "ptable").attr("border", 0);
           var ctable = d3.select("#templateContainer").append("table")
@@ -302,6 +304,9 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
           var canvas = new fabric.Canvas('imgCanvas');
           curr.fc = canvas;
           if (data && data.length > 0) {
+            var index = curr.currPage - 1;
+            var info = data[index][0] + "/" + data[index][5];
+            d3.select("#docinfo").text(info);
             var url = "grade.php?go=getImage&input=" + 
               data[curr.currPage - 1][4] + "&examid=" + curr.exam[0];
             fabric.Image.fromURL(url, function(oImg) {
@@ -368,13 +373,34 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
         });
   }
 
+  ShowID.prototype.getFCobject = function() {
+    var curr = this;
+    var canvas = curr.fc;
+    var index = 0;
+    if (curr.currTData) {
+      index = curr.currTData[0] + 1;
+    }
+    if (index < canvas.size()) {
+      var obj = canvas.item(index);
+      return obj;
+    }
+    return null;
+  }
+
   ShowID.prototype.zoomIn = function() {
     var curr = this;
     var canvas = curr.fc;
     if (curr.tool == "Grade" || curr.tool == "View") {
       var zoomLevel = canvas.getZoom();
       if (zoomLevel < 16) {
-        canvas.setZoom(zoomLevel * 2);
+        var obj = curr.getFCobject();
+        if (obj) {
+          var point = obj.getCenterPoint();
+          canvas.zoomToPoint(point, zoomLevel * 2);
+        }
+        else {
+          canvas.setZoom(zoomLevel * 2);
+        }
         canvas.renderAll();
       }
     }
@@ -386,7 +412,14 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     if (curr.tool == "Grade" || curr.tool == "View") {
       var zoomLevel = canvas.getZoom();
       if (zoomLevel > 1) {
-        canvas.setZoom(zoomLevel * 0.5);
+        var obj = curr.getFCobject();
+        if (obj) {
+          var point = obj.getCenterPoint();
+          canvas.zoomToPoint(point, zoomLevel * 0.5);
+        }
+        else {
+          canvas.setZoom(zoomLevel * 0.5);
+        }
         canvas.renderAll();
       }
     }
@@ -415,7 +448,19 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
       data: {go: "saveRubric", input: JSON.stringify(res),
         examid: curr.exam[0]},
       url: "grade.php",
-      success: function(d) { console.log(d); }
+      success: function(d) {
+        var st = JSON.parse(d);
+        if (st && st[0] == 1) {
+          d3.select("#gradeStatus").append("br");
+          d3.select("#gradeStatus").append("span").html(st[1]);
+          d3.select("#gradeStatus").append("text").html("&radic;");
+        }
+        if (st && st[0] == 0) {
+          d3.select("#gradeStatus").append("br");
+          d3.select("#gradeStatus").append("span")
+            .attr("class", "errorInfo").html(st[1]);
+        }
+      }
     });
   }
 
@@ -457,7 +502,19 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
       data: {go: "saveGrade", input: JSON.stringify(res),
         examid: curr.exam[0]},
       url: "grade.php",
-      success: function(d) { console.log(d); }
+      success: function(d) {
+        var st = JSON.parse(d);
+        if (st && st[0] == 1) {
+          d3.select("#gradeStatus").append("br");
+          d3.select("#gradeStatus").append("span").html(st[1]);
+          d3.select("#gradeStatus").append("text").html("&radic;");
+        }
+        if (st && st[0] == 0) {
+          d3.select("#gradeStatus").append("br");
+          d3.select("#gradeStatus").append("span")
+            .attr("class", "errorInfo").html(st[1]);
+        }
+      }
     });
   }
 
@@ -561,10 +618,13 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
       .attr("id", "inotes");
     d3.select("#irlist").append("br");
     if (curr.tool == "Grade") {
-      d3.select("#irlist").append("input").attr("type", "button")
-        .attr("value", "Submit")
-        .on("click", function (e) {
+      var cell1 = d3.select("#irlist").append("input").attr("type", "button")
+        .attr("value", "Submit");
+      var cell3 = d3.select("#irlist").append("span")
+        .attr("id", "gradeStatus");
+      cell1.on("click", function (e) {
           // Submit grades
+          d3.select("#gradeStatus").html("&radic;");
           curr.calculateGrade();
           curr.saveRubric();
           curr.saveGrade();
@@ -750,8 +810,10 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
       .on("click", function(d) {
         var obj = d3.select(this).data();
         d3.json("grade.php?go=matchStudent&scanid=" + curr.data[0][0] +
-            "&studentid=" + obj[0][0] + "&examid=" + curr.exam[0], ident);
-        callback(obj);
+            "&studentid=" + obj[0][0] + "&examid=" + curr.exam[0],
+            function (data) {
+              callback(obj, data);
+            });
       });
   }
 
@@ -777,19 +839,34 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
         .attr("type", "text").attr("style", 'width: 100px')
         .attr("id", "namesearch");
       var cell2 = d3.select("#nameinfo").append("input")
-        .attr("type", "button").attr("value", "Search")
-        .on("click", function() {
+        .attr("type", "button").attr("value", "Search");
+      var cell3 = d3.select("#nameinfo").append("span")
+        .attr("id", "matchStatus");
+      var cell4 = d3.select("#nameinfo").append("div")
+        .attr("id", "matchResults");
+      cell2.on("click", function() {
           var str = d3.select("#namesearch").node().value;
+          d3.select("#matchStatus").html("&radic;");
+          d3.select("#matchResults").html("");
           d3.json("grade.php?go=searchName&input=" + str + 
               "&examid=" + curr.exam[0],
               function (data) {
                 var cols = ["ID", "lastName", "firstName", "userName",
                 "studentID"];
-                curr.appendTable("#nameinfo", data, cols, function(obj) {
-                  console.log(obj);
-                  ntable.html("");
-                  ntable.append("tr").selectAll("td").data(obj[0])
-                    .enter().append("td").html(ident);
+                curr.appendTable("#matchResults", data, cols, function(obj, st) {
+                  if (st && st[0]) {
+                    ntable.html("");
+                    ntable.append("tr").selectAll("td").data(obj[0])
+                      .enter().append("td").html(ident);
+                    d3.select("#matchStatus").html("&radic;&radic;");
+                  }
+                  if (st && st[0] == 0) {
+                    d3.select("#matchStatus").html("");
+                    d3.select("#matchStatus").append("br");
+                    d3.select("#matchStatus").append("span")
+                        .attr("class", "errorInfo").html(st[1]);
+                    d3.select("#matchStatus").append("br");
+                  }
                 });
               });
         });

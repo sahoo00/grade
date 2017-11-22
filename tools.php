@@ -33,6 +33,7 @@ $data = [$USER->username, $USER->email, $USER->role, $USER->userid];
 // print_r([$USER->authenticated, $USER->username, $USER->role, $data]);
 // echo "<br/>";
 // print_r($USER->info_log);
+// exit(0);
 
 if ($USER->authenticated && ($USER->role == "admin" || $USER->role == "grader")) {
 ?>
@@ -122,6 +123,10 @@ if ($USER->authenticated && ($USER->role == "admin" || $USER->role == "grader"))
     position:absolute;
     display:inline-block;
     color: #000000;
+}
+.errorInfo {
+  padding: 10px;
+    color: #d33;
 }
   </style>
   </head>

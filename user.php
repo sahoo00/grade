@@ -154,7 +154,6 @@
 
 			// file location for the user database
 			$dbfile = User::DATABASE_LOCATION  . User::DATABASE_NAME . ".db";
-
 			// bind the database handler
 			$this->database = new PDO("sqlite:" . $dbfile);
 
