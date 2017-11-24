@@ -757,6 +757,8 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
           curr.currTData = tdata = data[0];
           curr.updateRubric();
         });
+    curr.hideObjects();
+    curr.fc.renderAll();
   }
 
   ShowID.prototype.displayRubric = function() {
@@ -1041,8 +1043,31 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     }
   }
 
+  ShowID.prototype.hideAllObjects = function() {
+    var curr = this;
+    if (curr.fc) {
+      var objs = curr.fc.getObjects();
+      for (var i =0; i < objs.length; i++) {
+        if (objs[i].get('type') != "image" &&
+            objs[i].get('annPage') > 0) {
+          objs[i].opacity = 0;
+          objs[i].selectable = false;
+        }
+      }
+      curr.fc.discardActiveObject();
+    }
+  }
+
   ShowID.prototype.hideObjects = function() {
     var curr = this;
+    if (curr.tool != "Template") {
+      curr.hideAllObjects();
+      var obj = curr.getFCobject();
+      if (obj && obj.get('annPage') == curr.currPage) {
+        obj.opacity = 1;
+      }
+      return;
+    }
     if (curr.fc) {
       var objs = curr.fc.getObjects();
       for (var i =0; i < objs.length; i++) {
@@ -1054,9 +1079,6 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
             objs[i].get('annPage') > 0 && 
             objs[i].get('annPage') != curr.currPage) {
           objs[i].opacity = 0;
-          objs[i].selectable = false;
-        }
-        if (curr.tool != "Template") {
           objs[i].selectable = false;
         }
       }
