@@ -1235,29 +1235,31 @@ function updateList() {
   var login = getUserLoginData();
   var sel = d3.select("#examlist").selectAll("li").data(examlist);
   var e = sel.enter().append("li").selectAll("span")
-    .data(function (d) { return [d[1], "  Pages: ", d[4]]; })
+    .data(function (d) { return [d[1], "  Pages: ", d[4], ""]; })
     .enter().append("span")
     .html(function (d) { return d; });
-  d3.select("#examlist").selectAll("li").each(function (d, i) {
-    var s = d3.select(this);
-    s.append("span").text(" ");
-    s.append("button").text("Select")
-      .on("click", function() {
-        selectedExam = d;
-        d3.select("#selectExam").html("");
-        d3.select("#selectExamAgain").html("");
-        d3.select("#selectExamAgain").append("span").html(d[1]);
-        d3.select("#selectExamAgain").append("span").html("  ");
-        d3.select("#selectExamAgain").append("button")
-          .text("Select Another Exam")
-          .on("click", function() {
-            d3.select("#templateContainer").html("");
-            d3.select("#toolsInput").attr("style", "display:none;")
-            selectExamID();
-          });
-        d3.select("#toolsInput").attr("style", "display:block;");
-      });
-  });
+  e.filter(function (d, i) { return i == 3; })
+    .each(function (d) {
+      var s = d3.select(this);
+      var obj = d3.select(this.parentNode).data();
+      s.html(" ");
+      s.append("button").text("Select")
+        .on("click", function() {
+          selectedExam = obj[0];
+          d3.select("#selectExam").html("");
+          d3.select("#selectExamAgain").html("");
+          d3.select("#selectExamAgain").append("span").html(obj[0][1]);
+          d3.select("#selectExamAgain").append("span").html("  ");
+          d3.select("#selectExamAgain").append("button")
+            .text("Select Another Exam")
+            .on("click", function() {
+              d3.select("#templateContainer").html("");
+              d3.select("#toolsInput").attr("style", "display:none;")
+              selectExamID();
+            });
+          d3.select("#toolsInput").attr("style", "display:block;");
+        });
+    });
   if (login[2] == "admin") {
     e.filter(function (d, i) { return i == 0; })
       .each(function (d) {
