@@ -19,10 +19,30 @@
 
 <?php
    $urid = ""; 
+   $examid = null;
    if (array_key_exists("urid", $_GET)) {
      $urid = $_GET["urid"];
    }
-   echo "currScan = new ShowID('View');\n";
+   if (array_key_exists("examid", $_GET)) {
+     $examid = $_GET["examid"];
+   }
+
+   function getExam($examid) {
+     if ($examid == null) { return null; }
+     $db = new SQLite3('tmpdir/exams.db');
+     $results = $db->query("SELECT * FROM exams where id = $examid");
+     $res = [];
+     while ($row = $results->fetchArray()) {
+         $res = [$row["id"], $row["name"], $row["dbfile"], $row["scandir"],
+         $row["pages"], $row["graders"]];
+         break;
+     }
+     return json_encode($res);
+   }
+
+   $exam = getExam($examid);
+   echo "selectedExam = $exam;\n";
+   echo "currScan = new ShowID('View', selectedExam);\n";
    echo "currScan.init('View:$urid');\n";
 ?>
 

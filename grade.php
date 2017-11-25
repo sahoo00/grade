@@ -117,6 +117,31 @@ if (array_key_exists("go", $_GET)) {
   if (strcmp($_GET["go"], "getTotal") == 0) {
     getTotal($_GET["scanid"]);
   }
+  if (strcmp($_GET["go"], "getGrades") == 0) {
+    getGrades($_GET["examids"]);
+  }
+}
+
+function getGrades($examids) {
+  global $examid;
+  $exams = explode(",", urldecode($examids));
+  $res = [];
+  foreach ($exams as $e) {
+    $examid = $e;
+    $db = getDB();
+    $str = "SELECT * from students where grade != -1";
+    $results = $db->query($str);
+    while ($row = $results->fetchArray()) {
+      if ($row["grade"] != -1) {
+        $urid = $row["uniqueID"];
+        $link = "<a href=\"view.php?urid=$urid&examid=$e\"> $urid </a>";
+        array_push($res, [$row["lastName"], $row["firstName"],
+          $row["userName"], $row["studentID"],
+          $e, $row["grade"], $link]);
+      }
+    }
+  }
+  echo json_encode($res);
 }
 
 function getTotal($scanid) {
@@ -566,7 +591,11 @@ function searchName($input) {
   $res = [[-1, "Unknown", "", "", ""]];
   if ($input != "") {
     $db = getDB();
-    $results = $db->query("SELECT * FROM students WHERE lastName LIKE '%$input%' OR firstName LIKE '%$input%' LIMIT 5");
+    $str = "SELECT * FROM students WHERE
+      lastName LIKE '%$input%' OR firstName LIKE '%$input%' OR
+      studentID LIKE '%$input%'
+      LIMIT 5";
+    $results = $db->query($str);
     while ($row = $results->fetchArray()) {
       array_push($res,
         [$row["id"], $row["lastName"],

@@ -1294,6 +1294,24 @@ function updateList() {
   sel.exit().remove();
 }
 
+function viewGrades() {
+  d3.json("grade.php?go=getGrades&examids=0,1,2", function (data) {
+    var sel = d3.select("#templateContainer");
+    sel.html("");
+    var reftable = sel.append("table")
+      .attr("border", 0);
+    var refthead = reftable.append("thead"),
+    reftbody = reftable.append("tbody");
+    var columns = ["lastName", "firstName", "userName", "studentID", 
+      "ExamID", "Grade", "Link"];
+    refthead.append("tr").selectAll("th").data(columns)
+      .enter().append("th").attr("align", "left").text(ident);
+    reftbody.selectAll("tr").data(data)
+      .enter().append("tr").selectAll("td").data(ident)
+      .enter().append("td").html(ident);
+  });
+}
+
 function selectExamID() {
   d3.json("grade.php?go=getExams", function (data) {
     examlist = data;
@@ -1321,8 +1339,7 @@ function selectExamID() {
     updateList();
     if (login[2] == "admin") {
       sel.append("br");
-      sel.append("button").attr("class", "btn btn-primary")
-        .text("Submit")
+      sel.append("button").text("Submit")
         .on("click", function() {
           $.ajax({type: 'POST',
             data: {go: "manageExams", input: JSON.stringify(examlist),
@@ -1332,6 +1349,9 @@ function selectExamID() {
           });
         });
     }
+    sel.append("span").html(" ");
+    sel.append("button").text("View Grades")
+      .on("click", function() { return viewGrades(); });
   });
 }
 
