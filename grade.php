@@ -748,6 +748,7 @@ function uploadRoster($file) {
   { 
     $line = fgets($fp);
     $line = chop($line, "\r\n");
+    $line = str_replace("'", "", $line);
     $l1 = explode("\t", $line);
     if (count($l1) <= 0) {
       continue;
