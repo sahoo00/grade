@@ -50,3 +50,11 @@ rlist text,
 graders text,
 PRIMARY KEY (scanid, tid)
 );
+DROP TABLE regrades;
+CREATE TABLE regrades 
+(
+scanid INTEGER,
+tid INTEGER,
+notes text,
+PRIMARY KEY (scanid, tid)
+);

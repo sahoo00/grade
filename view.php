@@ -54,6 +54,10 @@
       background-color: white;
     }
 
+.errorInfo {
+  padding: 10px;
+    color: #d33;
+}
   </style>
   </head>
   <body>

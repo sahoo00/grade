@@ -251,6 +251,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     this.sty = 0;
     this.dType = null;
     this.currTData = null;
+    this.currRData = null;
     this.data = null;
     this.igrade = null;
     this.rlist = null;
@@ -496,6 +497,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     curr.updateGradeInfo();
     var tdata = curr.currTData;
     var notes = d3.select("#inotes").property('value');
+    notes = notes.replace("'", "-");
     var res = [[curr.data[0][0], tdata[0], notes, curr.igrade,
     curr.rlist, curr.graders]];
     $.ajax({type: 'POST',
@@ -512,6 +514,43 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
         if (st && st[0] == 0) {
           d3.select("#gradeStatus").append("br");
           d3.select("#gradeStatus").append("span")
+            .attr("class", "errorInfo").html(st[1]);
+        }
+      }
+    });
+  }
+
+  ShowID.prototype.saveReGrade = function() {
+    var curr = this;
+    if (curr.tool != "View") {
+      return;
+    }
+    var tdata = curr.currTData;
+    var notes = d3.select("#iregradenotes").property('value');
+    if(notes.trim()=="") { 
+      d3.select("#regradeStatus").append("br");
+      d3.select("#regradeStatus").append("span")
+        .attr("class", "errorInfo").html("No input specified");
+      return;
+    }
+    notes = notes.replace("'", "-");
+    var rdata = [[curr.data[0][0], tdata[0], notes]];
+    curr.currRData = rdata;
+    var res = rdata;
+    $.ajax({type: 'POST',
+      data: {go: "saveReGrade", input: JSON.stringify(res),
+        examid: curr.exam[0]},
+      url: "grade.php",
+      success: function(d) {
+        var st = JSON.parse(d);
+        if (st && st[0] == 1) {
+          d3.select("#regradeStatus").append("br");
+          d3.select("#regradeStatus").append("span").html(st[1]);
+          d3.select("#regradeStatus").append("text").html("&radic;");
+        }
+        if (st && st[0] == 0) {
+          d3.select("#regradeStatus").append("br");
+          d3.select("#regradeStatus").append("span")
             .attr("class", "errorInfo").html(st[1]);
         }
       }
@@ -702,6 +741,37 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     curr.calculateGrade();
   }
 
+  ShowID.prototype.updateRegrade = function() {
+    var curr = this;
+    if (curr.tool != "Grade" && curr.tool != "View") {
+      return;
+    }
+    var rdata = curr.currRData;
+    var cell = d3.select("#regradenotes");
+    cell.html("Regrade:");
+    cell.append("br");
+    cell.append("textarea").attr("rows", "3")
+      .attr("id", "iregradenotes");
+    cell.append("br");
+    if (rdata && rdata.length > 0) {
+       d3.select("#iregradenotes").property("value", rdata[0][2]);
+    }
+    if (curr.tool == "View") {
+      var cell1 = cell.append("input").attr("type", "button")
+        .attr("value", "Request Regrade");
+      var cell3 = cell.append("span")
+        .attr("id", "regradeStatus");
+      cell1.on("click", function (e) {
+          // Submit grades
+          d3.select("#regradeStatus").html("&radic;");
+          curr.saveReGrade();
+        });
+    }
+    if (curr.tool == "Grade") {
+      d3.select("#iregradenotes").property("disabled", "disabled");
+    }
+  }
+
   ShowID.prototype.gradeOneRegion = function(tdata) {
     var curr = this;
     if (curr.tool != "Grade" && curr.tool != "View") {
@@ -756,6 +826,13 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
         function (data) {
           curr.currTData = tdata = data[0];
           curr.updateRubric();
+        });
+    d3.select("#rlist").append("div").attr("id", "regradenotes");
+    d3.json("grade.php?go=getReGrades&scanid=" + curr.data[0][0] + 
+    "&templateid=" + tdata[0] + "&examid=" + curr.exam[0],
+        function (data) {
+          curr.currRData = data;
+          curr.updateRegrade();
         });
     curr.hideObjects();
     curr.fc.renderAll();
@@ -1303,12 +1380,36 @@ function viewGrades() {
     var refthead = reftable.append("thead"),
     reftbody = reftable.append("tbody");
     var columns = ["lastName", "firstName", "userName", "studentID", 
-      "ExamID", "Grade", "Link"];
+      "Version", "ScanID", "Grade", "Total", "Link"];
     refthead.append("tr").selectAll("th").data(columns)
       .enter().append("th").attr("align", "left").text(ident);
     reftbody.selectAll("tr").data(data)
       .enter().append("tr").selectAll("td").data(ident)
-      .enter().append("td").html(ident);
+      .enter().append("td").html(function (d, i) {
+        if (i == 4) { return "ABC"[d]; }
+        else { return d; }
+      });
+  });
+}
+
+function viewRegrades() {
+  d3.json("grade.php?go=getAllRegrades&examids=0,1,2", function (data) {
+    var sel = d3.select("#templateContainer");
+    sel.html("");
+    var reftable = sel.append("table")
+      .attr("border", 0);
+    var refthead = reftable.append("thead"),
+    reftbody = reftable.append("tbody");
+    var columns = ["lastName", "firstName", "userName", "studentID", 
+      "Version", "ScanID", "Grade", "Total", "Link"];
+    refthead.append("tr").selectAll("th").data(columns)
+      .enter().append("th").attr("align", "left").text(ident);
+    reftbody.selectAll("tr").data(data)
+      .enter().append("tr").selectAll("td").data(ident)
+      .enter().append("td").html(function (d, i) {
+        if (i == 4) { return "ABC"[d]; }
+        else { return d; }
+      });
   });
 }
 
@@ -1352,6 +1453,8 @@ function selectExamID() {
     sel.append("span").html(" ");
     sel.append("button").text("View Grades")
       .on("click", function() { return viewGrades(); });
+    sel.append("button").text("View Regrades")
+      .on("click", function() { return viewRegrades(); });
   });
 }
 

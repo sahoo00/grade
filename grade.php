@@ -71,7 +71,11 @@ if ($auth && array_key_exists("go", $_POST)) {
     manageExams($_POST["action"], $_POST["input"]);
   }
 }
-
+if (array_key_exists("go", $_POST)) {
+  if (strcmp($_POST["go"], "saveReGrade") == 0) {
+    saveReGrade($_POST["input"]);
+  }
+}
 if (array_key_exists("go", $_GET)) {
   if (strcmp($_GET["go"], "upload") == 0) {
     if (strcmp($_GET["tool"], "Roster") == 0) {
@@ -120,6 +124,60 @@ if (array_key_exists("go", $_GET)) {
   if (strcmp($_GET["go"], "getGrades") == 0) {
     getGrades($_GET["examids"]);
   }
+  if (strcmp($_GET["go"], "getReGrades") == 0) {
+    getReGrades($_GET["scanid"], $_GET["templateid"]);
+  }
+  if (strcmp($_GET["go"], "getAllRegrades") == 0) {
+    getAllRegrades($_GET["examids"]);
+  }
+}
+
+function getAllRegrades($examids) {
+  global $examid;
+  $exams = explode(",", urldecode($examids));
+  $res = [];
+  foreach ($exams as $e) {
+    $examid = $e;
+    $db = getDB();
+    $shash = [];
+    $str = "
+select t.id as id, t.studentID as studentID, t1.value as value from 
+(select id,studentID from scans inner join regrades
+    on regrades.scanid = scans.id and studentID != -1 and page = 1) t
+  inner join
+(SELECT grades.scanid, sum(template.value) as value 
+    from template inner join grades on
+      template.id = grades.tid group by grades.scanid) t1
+    on t.id = t1.scanid";
+    $results = $db->query($str);
+    while ($row = $results->fetchArray()) {
+       $shash[$row["studentID"]] = [$row["id"], $row["value"]];
+    }
+    $str = "SELECT * from students where grade != -1";
+    $results = $db->query($str);
+    while ($row = $results->fetchArray()) {
+      if ($row["grade"] != -1 && array_key_exists($row["id"], $shash)) {
+        $arr = $shash[$row["id"]];
+        $urid = $row["uniqueID"];
+        $link = "<a href=\"view.php?urid=$urid&examid=$e\"> $urid </a>";
+        array_push($res, [$row["lastName"], $row["firstName"],
+          $row["userName"], $row["studentID"],
+          $e, $arr[0], $row["grade"], $arr[1], $link]);
+      }
+    }
+  }
+  echo json_encode($res);
+}
+
+function getReGrades($scanid, $templateid) {
+  $res = [];
+  $db = getDB();
+  $str = "SELECT * FROM regrades WHERE scanid = $scanid AND tid = $templateid";
+  $results = $db->query($str);
+  while ($row = $results->fetchArray()) {
+    array_push($res, [$row["scanid"], $row["tid"], $row["notes"]]);
+  }
+  echo json_encode($res);
 }
 
 function getGrades($examids) {
@@ -129,15 +187,27 @@ function getGrades($examids) {
   foreach ($exams as $e) {
     $examid = $e;
     $db = getDB();
+    $shash = [];
+    $str = "
+select id,studentID, t1.value from scans inner join 
+(SELECT grades.scanid, sum(template.value) as value 
+    from template inner join grades on
+      template.id = grades.tid group by grades.scanid) t1
+    on t1.scanid = scans.id where studentID != -1 and page = 1";
+    $results = $db->query($str);
+    while ($row = $results->fetchArray()) {
+       $shash[$row["studentID"]] = [$row["id"], $row["value"]];
+    }
     $str = "SELECT * from students where grade != -1";
     $results = $db->query($str);
     while ($row = $results->fetchArray()) {
-      if ($row["grade"] != -1) {
+      if ($row["grade"] != -1 && array_key_exists($row["id"], $shash)) {
+        $arr = $shash[$row["id"]];
         $urid = $row["uniqueID"];
         $link = "<a href=\"view.php?urid=$urid&examid=$e\"> $urid </a>";
         array_push($res, [$row["lastName"], $row["firstName"],
           $row["userName"], $row["studentID"],
-          $e, $row["grade"], $link]);
+          $e, $arr[0], $row["grade"], $arr[1], $link]);
       }
     }
   }
@@ -500,6 +570,45 @@ function saveGrade($input) {
       }
       else {
         $res = [0, "Grader not found"];
+        break;
+      }
+    }
+    if ($res[0] == 1) {
+      if ($mdb->end() == FALSE) {
+        $res = [0, "Couldn't end transaction"];
+      }
+    }
+  }
+  if (!$mdb->release()) {
+    $res = [0, "Couldn't release lock"];
+    echo json_encode($res);
+    return;
+  }
+  echo json_encode($res);
+}
+
+function saveReGrade($input) {
+  $res = urldecode($input);
+  $obj = json_decode($res);
+  $mdb = new MDB();
+  if (!$mdb->connected) {
+    echo json_encode([0, "database not connected"]);
+    return;
+  }
+  if (!$mdb->lock()) {
+    echo json_encode([0, "Couldn't get lock"]);
+    return;
+  }
+  $res = [1, "Regrades updated"];
+  if ($mdb->begin() == FALSE) {
+    $res = [0, "Couldn't begin transaction"];
+  }
+  else {
+    for ($i = 0; $i < count($obj); $i++) {
+      $str = "REPLACE into 'regrades' VALUES (".
+        $obj[$i][0] .  ", " . $obj[$i][1] . ", '". $obj[$i][2] . "')\n";
+      if ($mdb->query($str) == FALSE) {
+        $res = [0, "Couldn't update regrades"];
         break;
       }
     }
