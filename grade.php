@@ -22,12 +22,12 @@ if ($USER->role == 'user') {
 $target_dir = "tmpdir/";
 $file = "";
 
-$examid = null;
-if (array_key_exists("examid", $_GET)) {
-  $examid = $_GET["examid"];
+$evid = null;
+if (array_key_exists("evid", $_GET)) {
+  $evid = $_GET["evid"];
 }
-if (array_key_exists("examid", $_POST)) {
-  $examid = $_POST["examid"];
+if (array_key_exists("evid", $_POST)) {
+  $evid = $_POST["evid"];
 }
 
 if ($auth && array_key_exists("uploads", $_FILES)) {
@@ -133,11 +133,11 @@ if (array_key_exists("go", $_GET)) {
 }
 
 function getAllRegrades($examids) {
-  global $examid;
+  global $evid;
   $exams = explode(",", urldecode($examids));
   $res = [];
   foreach ($exams as $e) {
-    $examid = $e;
+    $evid = $e;
     $db = getDB();
     $shash = [];
     $str = "
@@ -159,7 +159,7 @@ select t.id as id, t.studentID as studentID, t1.value as value from
       if ($row["grade"] != -1 && array_key_exists($row["id"], $shash)) {
         $arr = $shash[$row["id"]];
         $urid = $row["uniqueID"];
-        $link = "<a href=\"view.php?urid=$urid&examid=$e\"> $urid </a>";
+        $link = "<a href=\"view.php?urid=$urid&evid=$e\"> $urid </a>";
         array_push($res, [$row["lastName"], $row["firstName"],
           $row["userName"], $row["studentID"],
           $e, $arr[0], $row["grade"], $arr[1], $link]);
@@ -181,11 +181,11 @@ function getReGrades($scanid, $templateid) {
 }
 
 function getGrades($examids) {
-  global $examid;
+  global $evid;
   $exams = explode(",", urldecode($examids));
   $res = [];
   foreach ($exams as $e) {
-    $examid = $e;
+    $evid = $e;
     $db = getDB();
     $shash = [];
     $str = "
@@ -204,7 +204,7 @@ select id,studentID, t1.value from scans inner join
       if ($row["grade"] != -1 && array_key_exists($row["id"], $shash)) {
         $arr = $shash[$row["id"]];
         $urid = $row["uniqueID"];
-        $link = "<a href=\"view.php?urid=$urid&examid=$e\"> $urid </a>";
+        $link = "<a href=\"view.php?urid=$urid&evid=$e\"> $urid </a>";
         array_push($res, [$row["lastName"], $row["firstName"],
           $row["userName"], $row["studentID"],
           $e, $arr[0], $row["grade"], $arr[1], $link]);
@@ -242,41 +242,48 @@ function manageExams($action, $input) {
   $obj = json_decode($res);
   $db = new SQLite3('tmpdir/exams.db');
   for ($i = 0; $i < count($obj); $i++) {
-    $graders = $obj[$i][5];
-    $dbfile = $obj[$i][2];
-    $scandir = $obj[$i][3];
-    if (!file_exists($scandir)) {
-      mkdir($scandir, 0777, true);
-      $list = explode('/', $scandir);
-      $dir = null;
-      foreach ($list as $d) {
-        if ($dir == null) {
-          $dir = $d;
-        }
-        else {
-          $dir = $dir . "/" . $d;
-        }
-        chmod($dir, 0777);
-      }
-    }
-    if (!file_exists($dbfile)) {
-      system("sqlite3 $dbfile < schemas.sql");
-      chmod($dbfile, 0777);
-    }
-    //rmdir($scandir);
-    // Grader check not enforced because it records the grader that started the
-    // exam
-    $str = "REPLACE into 'exams' VALUES (".
-      $obj[$i][0] .  ", '" . $obj[$i][1] . "', '". $obj[$i][2] . "', '" .
-      $obj[$i][3] . "', '". $obj[$i][4] ."', '$graders')\n";
+    $id = $obj[$i][0][0];
+    $name = $obj[$i][0][1];
+    $graders = $obj[$i][0][2];
+    $str = "REPLACE into 'exams' VALUES ($id, '$name', '$graders')\n";
     $db->query($str);
     echo $str;
+    for ($j = 0; $j < count($obj[$i][1]); $j++) {
+      list($id, $examid, $name, $dbfile, $scandir, $pages, $graders) =
+        $obj[$i][1][$j];
+      if (!file_exists($scandir)) {
+        mkdir($scandir, 0777, true);
+        $list = explode('/', $scandir);
+        $dir = null;
+        foreach ($list as $d) {
+          if ($dir == null) {
+            $dir = $d;
+          }
+          else {
+            $dir = $dir . "/" . $d;
+          }
+          chmod($dir, 0777);
+        }
+      }
+      if (!file_exists($dbfile)) {
+        system("sqlite3 $dbfile < schemas.sql");
+        chmod($dbfile, 0777);
+      }
+      //rmdir($scandir);
+      // Grader check not enforced because it records
+      // the grader that started the
+      // exam
+      $str = "REPLACE into 'versions' VALUES (
+        $id, $examid, '$name', '$dbfile', '$scandir', $pages, '$graders')\n";
+      $db->query($str);
+      echo $str;
+    }
   }
 }
 
 function getDbFile($id) {
   $db = new SQLite3('tmpdir/exams.db');
-  $results = $db->query("SELECT dbfile FROM exams where id = $id");
+  $results = $db->query("SELECT dbfile FROM versions where id = $id");
   while ($row = $results->fetchArray()) {
     return $row["dbfile"];
   }
@@ -293,7 +300,7 @@ function getAnnFile($id) {
 
 function getScanDir($id) {
   $db = new SQLite3('tmpdir/exams.db');
-  $results = $db->query("SELECT scandir FROM exams where id = $id");
+  $results = $db->query("SELECT scandir FROM versions where id = $id");
   while ($row = $results->fetchArray()) {
     return $row["scandir"];
   }
@@ -302,7 +309,7 @@ function getScanDir($id) {
 
 function getExamPages($id) {
   $db = new SQLite3('tmpdir/exams.db');
-  $results = $db->query("SELECT pages FROM exams where id = $id");
+  $results = $db->query("SELECT pages FROM versions where id = $id");
   while ($row = $results->fetchArray()) {
     return $row["pages"];
   }
@@ -311,12 +318,25 @@ function getExamPages($id) {
 
 function getExams() {
   $res = [];
+  $index = 0;
+  $hash = [];
   $db = new SQLite3('tmpdir/exams.db');
   $results = $db->query("SELECT * FROM exams");
   while ($row = $results->fetchArray()) {
     array_push($res,
-      [$row["id"], $row["name"], $row["dbfile"], $row["scandir"],
+      [[$row["id"], $row["name"], $row["graders"]], []]);
+    $hash[$row["id"]] = $index;
+    $index++;
+  }
+  $results = $db->query("SELECT * FROM versions");
+  while ($row = $results->fetchArray()) {
+    if (array_key_exists($row["examid"], $hash)) {
+      $i = $hash[$row["examid"]];
+      array_push($res[$i][1],
+        [$row["id"], $row["examid"], $row["name"],
+        $row["dbfile"], $row["scandir"],
         $row["pages"], $row["graders"]]);
+    }
   }
   echo json_encode($res);
 }
@@ -356,8 +376,8 @@ function getUsers() {
 }
 
 function getDB() {
-  global $examid;
-  $dbfile = getDbFile($examid);
+  global $evid;
+  $dbfile = getDbFile($evid);
   if ($dbfile != null) {
     $db = new SQLite3($dbfile);
     return $db;
@@ -729,7 +749,7 @@ function getName($input) {
 }
 
 function saveTemplate($input) {
-  global $examid;
+  global $evid;
   $mdb = new MDB();
   if (!$mdb->connected) {
     return;
@@ -738,7 +758,7 @@ function saveTemplate($input) {
     return;
   }
   $res = urldecode($input);
-  $file = getAnnFile($examid);
+  $file = getAnnFile($evid);
   echo "$file\n";
   if ($file == null) {
     return;
@@ -763,14 +783,14 @@ function saveTemplate($input) {
 }
 
 function getTemplate() {
-  global $examid;
-  $file = getAnnFile($examid);
+  global $evid;
+  $file = getAnnFile($evid);
   echo file_get_contents($file);
 }
 
 function getPages($input) {
-  global $examid;
-  $numPages = getExamPages($examid);
+  global $evid;
+  $numPages = getExamPages($evid);
   $db = getDB();
   $total = 0;
   $results = $db->query("SELECT COUNT(id) FROM scans");
@@ -897,8 +917,8 @@ function getParam($str) {
 }
 
 function getScanNum() {
-  global $examid;
-  $scandir = getScanDir($examid);
+  global $evid;
+  $scandir = getScanDir($evid);
   $handle = opendir($scandir);
   $maxid = 0;
   while ($file = readdir($handle)){
@@ -914,9 +934,9 @@ function getScanNum() {
 }
 
 function uploadScans($filename, $input) {
-  global $examid;
-  $scandir = getScanDir($examid);
-  $num = getExamPages($examid);
+  global $evid;
+  $scandir = getScanDir($evid);
+  $num = getExamPages($evid);
   $maxid = getScanNum();
   $maxid++;
   $start = $maxid;

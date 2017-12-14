@@ -68,3 +68,27 @@
 #php-cgi grade.php go=upload tool=Roster file="tmpdir/roster-2.txt" examid=2
 #php-cgi grade.php go=upload tool=Roster file="tmpdir/roster-2.txt" examid=0
 #php-cgi grade.php go=upload tool=Roster file="tmpdir/roster-2.txt" examid=1
+
+#php-cgi grade.php go=upload tool=Roster file="tmpdir/roster.txt" evid=3
+#php-cgi grade.php go=upload tool=Roster file="tmpdir/roster.txt" evid=4
+#php-cgi grade.php go=upload tool=Roster file="tmpdir/roster.txt" evid=5
+
+rm -fr tmpdir/exam-3/scans/*
+rm -fr tmpdir/exam-4/scans/*
+rm -fr tmpdir/exam-5/scans/*
+
+php-cgi grade.php go=upload tool="Upload Scans" file="tmpdir/VersionAsoln.pdf" \
+  input="num=2" evid=3
+php-cgi grade.php go=upload tool="Upload Scans" file="tmpdir/VersionA.pdf" \
+  input="num=2" evid=3
+
+php-cgi grade.php go=upload tool="Upload Scans" file="tmpdir/VersionBsoln.pdf" \
+  input="num=2" evid=4
+php-cgi grade.php go=upload tool="Upload Scans" file="tmpdir/VersionB.pdf" \
+  input="num=2" evid=4
+
+php-cgi grade.php go=upload tool="Upload Scans" file="tmpdir/VersionCsoln.pdf" \
+  input="num=2" evid=5
+php-cgi grade.php go=upload tool="Upload Scans" file="tmpdir/VersionC.pdf" \
+  input="num=2" evid=5
+

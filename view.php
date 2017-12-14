@@ -19,28 +19,32 @@
 
 <?php
    $urid = ""; 
-   $examid = null;
+   $evid = null;
    if (array_key_exists("urid", $_GET)) {
      $urid = $_GET["urid"];
    }
    if (array_key_exists("examid", $_GET)) {
-     $examid = $_GET["examid"];
+     $evid = $_GET["examid"];
+   }
+   if (array_key_exists("evid", $_GET)) {
+     $evid = $_GET["evid"];
    }
 
-   function getExam($examid) {
-     if ($examid == null) { return null; }
+   function getExam($evid) {
+     if ($evid == null) { return null; }
      $db = new SQLite3('tmpdir/exams.db');
-     $results = $db->query("SELECT * FROM exams where id = $examid");
+     $results = $db->query("SELECT * FROM versions where id = $evid");
      $res = [];
      while ($row = $results->fetchArray()) {
-         $res = [$row["id"], $row["name"], $row["dbfile"], $row["scandir"],
+       $res = [$row["id"], $row["examid"], 
+         $row["name"], $row["dbfile"], $row["scandir"],
          $row["pages"], $row["graders"]];
          break;
      }
      return json_encode($res);
    }
 
-   $exam = getExam($examid);
+   $exam = getExam($evid);
    echo "selectedExam = $exam;\n";
    echo "currScan = new ShowID('View', selectedExam);\n";
    echo "currScan.init('View:$urid');\n";

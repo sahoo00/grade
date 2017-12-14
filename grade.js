@@ -30,7 +30,7 @@ Upload.prototype.doUpload = function () {
     formData.append("go", "upload");
     formData.append("tool", this.tool);
     formData.append("input", this.input);
-    formData.append("examid", this.exam[0]);
+    formData.append("evid", this.exam[0]);
 
     $.ajax({
         type: "POST",
@@ -112,6 +112,114 @@ function ShowID(tool, exam) {
 }
 
 (function() {
+
+/***************bootstrap modal helper class *************/
+var Modal = function (options) {
+    var $this = this;
+
+    options = options ? options : {};
+    $this.options = {};
+    $this.options.header = options.header !== undefined ? options.header : false;
+    $this.options.footer = options.footer !== undefined ? options.footer : false;
+    $this.options.closeButton = options.closeButton !== undefined ? options.closeButton : true;
+    $this.options.footerCloseButton = options.footerCloseButton !== undefined ? options.footerCloseButton : false;
+    $this.options.id = options.id !== undefined ? options.id : "myModal";
+
+	
+    /**
+     * Append modal window html to body
+     */
+    $this.createModal = function () {
+        $('body').append('<div id="' + $this.options.id + '" class="modal fade"></div>');
+        $($this.selector).append('<div class="modal-dialog custom-modal"><div class="modal-content"></div></div>');
+        var win = $('.modal-content', $this.selector);
+        if ($this.options.header) {
+            win.append('<div class="modal-header"><h4 class="modal-title" lang="de"></h4></div>');
+            if ($this.options.closeButton) {
+                win.find('.modal-header').prepend('<button type="button" class="close" data-dismiss="modal">&times;</button>');
+            }
+        }
+
+        win.append('<div class="modal-body"></div>');
+
+        if ($this.options.footer) {
+            win.append('<div class="modal-footer"></div>');
+            if ($this.options.footerCloseButton) {
+                win.find('.modal-footer').append('<a data-dismiss="modal" href="#" class="btn btn-default" lang="de">' + $this.options.footerCloseButton + '</a>');
+            }
+        }
+		
+		$($this.selector).on('hidden.bs.modal', function (e) {
+			$($this.selector).remove();
+		});
+		
+		
+    };
+
+    /**
+     * Set header text. It makes sense only if the options.header is logical true.
+     * @param {String} html New header text.
+     */
+    $this.setHeader = function (html) {
+        $this.window.find('.modal-title').html(html);
+    };
+
+    /**
+     * Set body HTML.
+     * @param {String} html New body HTML
+     */
+    $this.setBody = function (html) {
+        $this.window.find('.modal-body').html(html);
+    };
+
+    /**
+     * Set footer HTML.
+     * @param {String} html New footer HTML
+     */
+    $this.setFooter = function (html) {
+        $this.window.find('.modal-footer').html(html);
+    };
+
+    /**
+     * Return window body element.
+     * @returns {jQuery} The body element
+     */
+    $this.getBody = function () {
+        return $this.window.find('.modal-body');
+    };
+
+    /**
+     * Show modal window
+     */
+    $this.show = function () {
+        $this.window.modal('show');
+    };
+
+    /**
+     * Hide modal window
+     */
+    $this.hide = function () {
+        $this.window.modal('hide');
+    };
+
+    /**
+     * Toggle modal window
+     */
+    $this.toggle = function () {
+        $this.window.modal('toggle');
+    };
+
+    $this.selector = "#" + $this.options.id;
+    if (!$($this.selector).length) {
+        $this.createModal();
+    }
+	
+    $this.window = $($this.selector);
+    $this.setHeader($this.options.header);
+};
+
+/************** END HELPER CLASS ******************/
+
 
 fabric.util.object.extend(fabric.Object.prototype, {
   annStr: "Unknown",
@@ -224,6 +332,9 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
       return false;
     });
   } else {
+
+    $(this.wrapperEl).on('mousewheel', function () { return false; });
+
     // When we exit dragmode, we restore the previous values on all objects
     this.forEachObject(function(object) {
       object.evented = (object.prevEvented !== undefined) ? object.prevEvented : object.evented;
@@ -235,7 +346,6 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     this.off('mouse:up');
     this.off('mouse:down');
     this.off('mouse:move');
-    $(this.wrapperEl).on('mousewheel', function (o) { return false; });
     // Restore selection ability on the canvas
     this.selection = true;
   }
@@ -281,18 +391,34 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     curr.input = input;
 
     d3.json("grade.php?go=getPages&input=" + input +
-        "&examid=" + curr.exam[0],
+        "&evid=" + curr.exam[0],
         function (data) {
           curr.data = data;
           d3.select("#templateContainer").html("");
           var dinfo = d3.select("#templateContainer").append("div")
-            .attr("id", "docinfo");
+            .attr("id", "docinfo")
+            .attr("style", "display:inline-block");
+          d3.select("#templateContainer").append("text")
+            .html(" | Enable Pan and Zoom ");
+          d3.select("#templateContainer").append("input")
+            .attr("type", "checkbox").attr("id", "enablePanZoom")
+            .on("change", function (e) {
+              if (curr.fc) {
+                if (d3.select("#enablePanZoom").property("checked")){
+                  curr.fc.toggleDragMode(true);
+                }
+                else {
+                  curr.fc.toggleDragMode(false);
+                }
+              }
+            });
           var reftable = d3.select("#templateContainer").append("table")
             .attr("id", "ptable").attr("border", 0);
           var ctable = d3.select("#templateContainer").append("table")
             .attr("id", "ctable").attr("border", 0);
           var ctr = ctable.append("tr");
-          var ctd1 = ctr.append("td");
+          var ctd1 = ctr.append("td").attr("align", "left")
+            .attr("valign", "top");
           var ctd2 = ctr.append("td").attr("align", "left")
             .attr("valign", "top");
           var imgc = ctd1.append("div").attr("style",
@@ -309,7 +435,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
             var info = data[index][0] + "/" + data[index][5];
             d3.select("#docinfo").text(info);
             var url = "grade.php?go=getImage&input=" + 
-              data[curr.currPage - 1][4] + "&examid=" + curr.exam[0];
+              data[curr.currPage - 1][4] + "&evid=" + curr.exam[0];
             fabric.Image.fromURL(url, function(oImg) {
               // scale image down, and flip it, before adding it onto canvas
               oImg.scale(0.5);
@@ -347,7 +473,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
               var obj = d3.select(this).data();
               if (curr.img && obj[0] > 0 && obj[0] < dataLen + 1) {
                 var url = "grade.php?go=getImage&input=" + 
-                  data[obj[0] - 1][4] + "&examid=" + curr.exam[0];
+                  data[obj[0] - 1][4] + "&evid=" + curr.exam[0];
                 curr.img.setSrc(url, function (d) {
                   curr.currPage = obj[0];
                   curr.hideObjects();
@@ -369,7 +495,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
             curr.addEvents();
             curr.showName(data[0][3]);
             curr.displayRubric();
-	    curr.panZoom();
+	    //curr.panZoom();
           }
         });
   }
@@ -378,6 +504,14 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     var curr = this;
     var canvas = curr.fc;
     var index = 0;
+    if (curr.tool == "Match") {
+      var objs = curr.fc.getObjects();
+      for (var i =0; i < objs.length; i++) {
+        if (objs[i].get('annStr') == "Name") {
+          return objs[i];
+        }
+      }
+    }
     if (curr.currTData) {
       index = curr.currTData[0] + 1;
     }
@@ -447,7 +581,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     }
     $.ajax({type: 'POST',
       data: {go: "saveRubric", input: JSON.stringify(res),
-        examid: curr.exam[0]},
+        evid: curr.exam[0]},
       url: "grade.php",
       success: function(d) {
         var st = JSON.parse(d);
@@ -502,7 +636,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     curr.rlist, curr.graders]];
     $.ajax({type: 'POST',
       data: {go: "saveGrade", input: JSON.stringify(res),
-        examid: curr.exam[0]},
+        evid: curr.exam[0]},
       url: "grade.php",
       success: function(d) {
         var st = JSON.parse(d);
@@ -539,7 +673,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     var res = rdata;
     $.ajax({type: 'POST',
       data: {go: "saveReGrade", input: JSON.stringify(res),
-        examid: curr.exam[0]},
+        evid: curr.exam[0]},
       url: "grade.php",
       success: function(d) {
         var st = JSON.parse(d);
@@ -564,7 +698,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     }
     $.ajax({type: 'POST',
       data: {go: "saveTotal", scanid: curr.data[0][0],
-        examid: curr.exam[0]},
+        evid: curr.exam[0]},
       url: "grade.php",
       success: function(d) {
         var st = JSON.parse(d);
@@ -585,7 +719,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
   ShowID.prototype.updateTotalGradeInfo = function() {
     var curr = this;
     d3.json("grade.php?go=getTotal&scanid=" + curr.data[0][0] + 
-      "&examid=" + curr.exam[0],
+      "&evid=" + curr.exam[0],
         function (data) {
           d3.select("#itotal").html( parseFloat(data[0]).toFixed(3)
             + "/" + parseFloat(data[1]).toFixed(3) );
@@ -692,8 +826,12 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
       .attr("id", "inotes");
     d3.select("#irlist").append("br");
     if (curr.tool == "Grade") {
+      d3.select("#irlist").append("button").text("PS")
+        .on("click", function (e) { callPrev(); return false; });
       var cell1 = d3.select("#irlist").append("input").attr("type", "button")
         .attr("value", "Submit");
+      d3.select("#irlist").append("button").text("NS")
+        .on("click", function (e) { callNext(); return false; });
       var cell3 = d3.select("#irlist").append("span")
         .attr("id", "gradeStatus");
       cell1.on("click", function (e) {
@@ -798,7 +936,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     curr.graders = null;
     if (curr.img && curr.currPage != tdata[3]) {
       var url = "grade.php?go=getImage&input=" + curr.data[tdata[3] - 1][4] +
-        "&examid=" + curr.exam[0];
+        "&evid=" + curr.exam[0];
       curr.img.setSrc(url, function (d) {
         curr.currPage = tdata[3];
         curr.hideObjects();
@@ -822,14 +960,14 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     }
     d3.select("#rlist").append("div").attr("id", "irlist");
     d3.json("grade.php?go=getRubric&scanid=" + curr.data[0][0] + 
-    "&templateid=" + tdata[0] + "&examid=" + curr.exam[0],
+    "&templateid=" + tdata[0] + "&evid=" + curr.exam[0],
         function (data) {
           curr.currTData = tdata = data[0];
           curr.updateRubric();
         });
     d3.select("#rlist").append("div").attr("id", "regradenotes");
     d3.json("grade.php?go=getReGrades&scanid=" + curr.data[0][0] + 
-    "&templateid=" + tdata[0] + "&examid=" + curr.exam[0],
+    "&templateid=" + tdata[0] + "&evid=" + curr.exam[0],
         function (data) {
           curr.currRData = data;
           curr.updateRegrade();
@@ -843,7 +981,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     if (curr.tool != "Grade" && curr.tool != "View") {
       return;
     }
-    d3.json("grade.php?go=getTemplateID" + "&examid=" + curr.exam[0],
+    d3.json("grade.php?go=getTemplateID" + "&evid=" + curr.exam[0],
         function (data) {
           d3.select("#objlist").html("");
           d3.select("#objlist").append("div").attr("id", "itotal");
@@ -928,7 +1066,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
       .on("click", function(d) {
         var obj = d3.select(this).data();
         d3.json("grade.php?go=matchStudent&scanid=" + curr.data[0][0] +
-            "&studentid=" + obj[0][0] + "&examid=" + curr.exam[0],
+            "&studentid=" + obj[0][0] + "&evid=" + curr.exam[0],
             function (data) {
               callback(obj, data);
             });
@@ -945,7 +1083,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
         .enter().append("td").html(ident);
     }
     else {
-      d3.json("grade.php?go=getName&input=" + id + "&examid=" + curr.exam[0],
+      d3.json("grade.php?go=getName&input=" + id + "&evid=" + curr.exam[0],
           function (data) {
             ntable.append("tr").selectAll("td").data(data)
               .enter().append("td").html(ident);
@@ -967,7 +1105,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
           d3.select("#matchStatus").html("&radic;");
           d3.select("#matchResults").html("");
           d3.json("grade.php?go=searchName&input=" + str + 
-              "&examid=" + curr.exam[0],
+              "&evid=" + curr.exam[0],
               function (data) {
                 var cols = ["ID", "lastName", "firstName", "userName",
                 "studentID"];
@@ -1116,6 +1254,43 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
         });
       d3.select("#objlist").append("div").attr("id", "tstatus");
       $('#templateList').sortable();
+      d3.select("#objlist").append("button").text("Import")
+	.on("click", function () {
+	  var m = new Modal({
+	    id: 'myImport',
+	    header: 'Import Template Info',
+	  });
+
+	  m.getBody().html('<div id="importTemplate"></div>');
+	  m.show();
+	  $('#myImport').on('shown.bs.modal',function() {
+	    var sel = d3.select("#importTemplate");
+	    sel.append("textarea").attr("rows", "10")
+	      .attr("id", "iTemplateInfo")
+	      .attr("style", "display:block;");
+	    sel.append("button").text("Submit")
+	      .on("click", function (e) {
+		var str = d3.select("#iTemplateInfo").property('value');
+		var res = str.split('\n');
+		var arr = [];
+		for (var i = 0; i < res.length; i++) {
+		  var d = res[i].trim().split(',', 2);
+		  arr.push(d);
+		}
+		var objs = curr.fc.getObjects();
+		var index = 0;
+		for (var i = 0; i < objs.length; i++) {
+		  if (objs[i].get('annPage') > 0 && index < arr.length) {
+		    objs[i].set('annStr', arr[index][1].trim());
+		    objs[i].set('annPts', arr[index][0].trim());
+		    index++;
+		  }
+		}
+		curr.callUpdate();
+	      });
+	  });
+  
+	});
 
     }
   }
@@ -1182,7 +1357,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
       var res = arr;
       $.ajax({type: 'POST',
         data: {go: "saveTemplate", input: JSON.stringify(res),
-            examid: curr.exam[0]},
+            evid: curr.exam[0]},
         url: "grade.php",
         success: function(d) { console.log(d); }
           });
@@ -1191,7 +1366,7 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
 
   ShowID.prototype.callLoad = function() {
     var curr = this;
-    d3.json('grade.php?go=getTemplate' + "&examid=" + curr.exam[0],
+    d3.json('grade.php?go=getTemplate' + "&evid=" + curr.exam[0],
         function (error,data) {
           var arr = data;
           if (!arr) { return; }
@@ -1284,6 +1459,20 @@ function callShow() {
   }
 }
 
+function callPrev() {
+  var tool = $('#select-tools').val();
+  var input = $('#inputtext').val();
+  if (tool == "Template" || tool == "Match"
+      || tool == "Grade" || tool == "View") {
+    if (currScan && currScan.data) {
+      currScan.tool = tool;
+      var prev = currScan.data[0][0] - 1;
+      if (prev < 1) { prev = 1; }
+      currScan.init(prev);
+    }
+  }
+}
+
 function callNext() {
   var tool = $('#select-tools').val();
   var input = $('#inputtext').val();
@@ -1291,7 +1480,8 @@ function callNext() {
       || tool == "Grade" || tool == "View") {
     if (currScan && currScan.data) {
       currScan.tool = tool;
-      currScan.init(currScan.data[0][0] + 1);
+      var next = currScan.data[0][0] + 1;
+      currScan.init(next);
     }
   }
 }
@@ -1310,22 +1500,48 @@ function callSave() {
 
 function updateList() {
   var login = getUserLoginData();
+  d3.select("#examlist").html("");
   var sel = d3.select("#examlist").selectAll("li").data(examlist);
   var e = sel.enter().append("li").selectAll("span")
-    .data(function (d) { return [d[1], "  Pages: ", d[4], ""]; })
-    .enter().append("span")
-    .html(function (d) { return d; });
-  e.filter(function (d, i) { return i == 3; })
+    .data(function (d) { return [d[0][1], "   ", "(+)"]; })
+    .enter().append("span").html(ident);
+  var vlist = d3.select("#examlist").selectAll("li")
+    .append("ul").selectAll("li")
+    .data(function (d) { return d[1]; })
+    .enter().append("li").selectAll("span")
+    .data(function (d) { return [d[2], " Pages: ", d[5], ""]; })
+    .enter().append("span").html(ident);
+  if (login[2] == "admin") {
+    e.filter(function (d, i) { return i == 2; })
+      .on('mouseover', function(){
+        d3.select(this).style('background-color', 'gray');
+      })
+      .on('mouseout', function(){
+        d3.select(this).style('background-color', 'white');
+      })
+      .on('click', function() {
+        var obj = d3.select(this.parentNode).data();
+        var evid = getNewEvid(examlist);
+        var dir = "tmpdir/exam-" + evid;
+        obj[0][1].push( [evid, obj[0][0][0], "Version A", dir + "/students.db",
+          dir + "/scans", 1, login[3]]);
+        updateList();
+      });
+  }
+  vlist.filter(function (d, i) { return i == 3; })
     .each(function (d) {
       var s = d3.select(this);
       var obj = d3.select(this.parentNode).data();
+      var obj1 = d3.select(this.parentNode.parentNode).data();
       s.html(" ");
       s.append("button").text("Select")
         .on("click", function() {
           selectedExam = obj[0];
           d3.select("#selectExam").html("");
           d3.select("#selectExamAgain").html("");
-          d3.select("#selectExamAgain").append("span").html(obj[0][1]);
+          d3.select("#selectExamAgain").append("span").html(obj1[0][0][1]);
+          d3.select("#selectExamAgain").append("span").html("  ");
+          d3.select("#selectExamAgain").append("span").html(obj[0][2]);
           d3.select("#selectExamAgain").append("span").html("  ");
           d3.select("#selectExamAgain").append("button")
             .text("Select Another Exam")
@@ -1348,22 +1564,35 @@ function updateList() {
           defaultValue: 'Unknown',
           tpl: "<input type='text' style='width: 100px'>",
           success: function(response, newValue) {
-            obj[0][1] = newValue;
+            obj[0][0][1] = newValue;
           }
         });
       });
-
-    e.filter(function (d, i) { return i == 2; })
+    vlist.filter(function (d, i) { return i == 0; })
       .each(function (d) {
         var cell = d3.select(this);
         var obj = d3.select(this.parentNode).data();
         $(cell.node()).editable({
           type: 'text',
           placement: 'right',
-          defaultValue: '1',
+          defaultValue: 'Unknown',
+          tpl: "<input type='text' style='width: 100px'>",
+          success: function(response, newValue) {
+            obj[0][2] = newValue;
+          }
+        });
+      });
+    vlist.filter(function (d, i) { return i == 2; })
+      .each(function (d) {
+        var cell = d3.select(this);
+        var obj = d3.select(this.parentNode).data();
+        $(cell.node()).editable({
+          type: 'text',
+          placement: 'right',
+          defaultValue: 'Unknown',
           tpl: "<input type='text' style='width: 50px'>",
           success: function(response, newValue) {
-            obj[0][4] = newValue;
+            obj[0][5] = newValue;
           }
         });
       });
@@ -1413,6 +1642,18 @@ function viewRegrades() {
   });
 }
 
+function getNewEvid(data) {
+  var id = 0;
+  for (var i = 0; i < data.length; i++) {
+    for (var j = 0; j < data[i][1].length; j++) {
+      if (id < data[i][1][j][0]) {
+        id = data[i][1][j][0];
+      }
+    }
+  }
+  return id + 1;
+}
+
 function selectExamID() {
   d3.json("grade.php?go=getExams", function (data) {
     examlist = data;
@@ -1430,9 +1671,11 @@ function selectExamID() {
       })
       .on('click', function() {
         var id = examlist.length;
-        var dir = "tmpdir/exam-" + id;
-        examlist.push([id, "New Exam", dir + "/students.db",
-            dir + "/scans", 1, login[3]]);
+        var evid = getNewEvid(examlist);
+        var dir = "tmpdir/exam-" + evid;
+        examlist.push([ [id, "New Exam", login[3]],
+          [[evid, id, "Version A", dir + "/students.db",
+            dir + "/scans", 1, login[3]]]]);
         updateList();
       });
     }
