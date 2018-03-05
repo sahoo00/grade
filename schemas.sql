@@ -56,6 +56,6 @@ CREATE TABLE regrades
 scanid INTEGER,
 tid INTEGER,
 notes text,
-done BOOLEAN,
+done INTEGER default 0,
 PRIMARY KEY (scanid, tid)
 );

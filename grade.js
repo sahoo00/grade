@@ -579,8 +579,9 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
       res.push([tdata[0], tdata[4][i][0], tdata[4][i][1], tdata[4][i][2],
         tdata[4][i][3], tdata[4][i][4]]);
     }
+    var input = encodeURIComponent(JSON.stringify(res));
     $.ajax({type: 'POST',
-      data: {go: "saveRubric", input: JSON.stringify(res),
+      data: {go: "saveRubric", input: input,
         evid: curr.exam[0]},
       url: "grade.php",
       success: function(d) {
@@ -634,8 +635,9 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     notes = notes.replace("'", "-");
     var res = [[curr.data[0][0], tdata[0], notes, curr.igrade,
     curr.rlist, curr.graders]];
+    var input = encodeURIComponent(JSON.stringify(res));
     $.ajax({type: 'POST',
-      data: {go: "saveGrade", input: JSON.stringify(res),
+      data: {go: "saveGrade", input: input,
         evid: curr.exam[0]},
       url: "grade.php",
       success: function(d) {
@@ -671,8 +673,9 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
     var rdata = [[curr.data[0][0], tdata[0], notes]];
     curr.currRData = rdata;
     var res = rdata;
+    var input = encodeURIComponent(JSON.stringify(res));
     $.ajax({type: 'POST',
-      data: {go: "saveReGrade", input: JSON.stringify(res),
+      data: {go: "saveReGrade", input: input,
         evid: curr.exam[0]},
       url: "grade.php",
       success: function(d) {
@@ -826,6 +829,36 @@ fabric.Canvas.prototype.toggleDragMode = function(dragMode) {
       .attr("id", "inotes");
     d3.select("#irlist").append("br");
     if (curr.tool == "Grade") {
+      d3.select("#irlist").append("button").text("C")
+        .on("click", function (e) {
+          d3.select("#irlist").selectAll("tr")
+            .filter(function (d, i) { return i == 0; })
+            .select("input.rcheckbox").property("checked", true);
+          d3.select("#gradeStatus").html("&radic;");
+          curr.calculateGrade();
+          curr.saveGrade();
+          var obj = d3.select("#tsel").node().options;
+          obj.selectedIndex++;
+          if (obj.selectedIndex == -1) {
+            obj.selectedIndex = 0;
+          }
+          curr.gradeOneRegion();
+        });
+      d3.select("#irlist").append("button").text("I")
+        .on("click", function (e) {
+          d3.select("#irlist").selectAll("tr")
+            .filter(function (d, i) { return i == 1; })
+            .select("input.rcheckbox").property("checked", true);
+          d3.select("#gradeStatus").html("&radic;");
+          curr.calculateGrade();
+          curr.saveGrade();
+          var obj = d3.select("#tsel").node().options;
+          obj.selectedIndex++;
+          if (obj.selectedIndex == -1) {
+            obj.selectedIndex = 0;
+          }
+          curr.gradeOneRegion();
+        });
       d3.select("#irlist").append("button").text("PS")
         .on("click", function (e) { callPrev(); return false; });
       var cell1 = d3.select("#irlist").append("input").attr("type", "button")
@@ -1601,7 +1634,8 @@ function updateList() {
 }
 
 function viewGrades() {
-  d3.json("grade.php?go=getGrades&examids=0,1,2", function (data) {
+  var examid = d3.select("#exam-select").property("value");
+  d3.json("grade.php?go=getGrades&examid=" + examid, function (data) {
     var sel = d3.select("#templateContainer");
     sel.html("");
     var reftable = sel.append("table")
@@ -1615,14 +1649,15 @@ function viewGrades() {
     reftbody.selectAll("tr").data(data)
       .enter().append("tr").selectAll("td").data(ident)
       .enter().append("td").html(function (d, i) {
-        if (i == 4) { return "ABC"[d]; }
+        if (i == 4) { return "ABC"[d % 3]; }
         else { return d; }
       });
   });
 }
 
 function viewRegrades() {
-  d3.json("grade.php?go=getAllRegrades&examids=0,1,2", function (data) {
+  var examid = d3.select("#exam-select").property("value");
+  d3.json("grade.php?go=getAllRegrades&examid=" + examid, function (data) {
     var sel = d3.select("#templateContainer");
     sel.html("");
     var reftable = sel.append("table")
@@ -1630,15 +1665,44 @@ function viewRegrades() {
     var refthead = reftable.append("thead"),
     reftbody = reftable.append("tbody");
     var columns = ["lastName", "firstName", "userName", "studentID", 
-      "Version", "ScanID", "Grade", "Total", "Link"];
+      "Version", "ScanID", "Grade", "Total", "Link", "Done"];
     refthead.append("tr").selectAll("th").data(columns)
       .enter().append("th").attr("align", "left").text(ident);
     reftbody.selectAll("tr").data(data)
       .enter().append("tr").selectAll("td").data(ident)
       .enter().append("td").html(function (d, i) {
-        if (i == 4) { return "ABC"[d]; }
+        if (i == 9) { return ""; }
+        if (i == 4) { return "ABC"[d % 3]; }
         else { return d; }
       });
+    reftbody.selectAll("tr").selectAll("td")
+      .filter(function (d, i) { return i == 9; })
+      .append("input").attr("type", "checkbox")
+      .property("checked", function (d) {
+        if (d == 0) { return false; }
+        return true;
+      })
+      .on("change", function (e) {
+        var ch = d3.select(this).property("checked");
+        var obj = d3.select(this.parentNode.parentNode).data();
+        var done = 0 + ch;
+        var sel = d3.select(this.parentNode).select("span");
+        sel.attr("class", "").html("&radic;");
+        d3.json("grade.php?go=doneRegrade&scanid=" + obj[0][5] +
+            "&done=" + done + "&evid=" + obj[0][4],
+            function (st) {
+              if (st && st[0]) {
+                sel.attr("class", "").html("&radic;&radic;");
+              }
+              if (st && st[0] == 0) {
+                sel.html("");
+                sel.attr("class", "errorInfo").html(st[1]);
+              }
+            });
+      });
+    reftbody.selectAll("tr").selectAll("td")
+      .filter(function (d, i) { return i == 9; })
+      .append("span").html("");
   });
 }
 
@@ -1693,7 +1757,12 @@ function selectExamID() {
           });
         });
     }
-    sel.append("span").html(" ");
+    sel.append("select").attr("id", "exam-select")
+      .attr("style", "width: unset; padding: unset; margin: unset;")
+      .selectAll("option").data(examlist).enter().
+      append("option")
+      .attr("value", function (d) { return d[0][0]; })
+      .html(function (d) { return d[0][1]; });
     sel.append("button").text("View Grades")
       .on("click", function() { return viewGrades(); });
     sel.append("button").text("View Regrades")

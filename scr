@@ -73,22 +73,33 @@
 #php-cgi grade.php go=upload tool=Roster file="tmpdir/roster.txt" evid=4
 #php-cgi grade.php go=upload tool=Roster file="tmpdir/roster.txt" evid=5
 
-rm -fr tmpdir/exam-3/scans/*
-rm -fr tmpdir/exam-4/scans/*
-rm -fr tmpdir/exam-5/scans/*
+#rm -fr tmpdir/exam-3/scans/*
+#rm -fr tmpdir/exam-4/scans/*
+#rm -fr tmpdir/exam-5/scans/*
+#
+#php-cgi grade.php go=upload tool="Upload Scans" file="tmpdir/VersionAsoln.pdf" \
+#  input="num=2" evid=3
+#php-cgi grade.php go=upload tool="Upload Scans" file="tmpdir/VersionA.pdf" \
+#  input="num=2" evid=3
+#
+#php-cgi grade.php go=upload tool="Upload Scans" file="tmpdir/VersionBsoln.pdf" \
+#  input="num=2" evid=4
+#php-cgi grade.php go=upload tool="Upload Scans" file="tmpdir/VersionB.pdf" \
+#  input="num=2" evid=4
+#
+#php-cgi grade.php go=upload tool="Upload Scans" file="tmpdir/VersionCsoln.pdf" \
+#  input="num=2" evid=5
+#php-cgi grade.php go=upload tool="Upload Scans" file="tmpdir/VersionC.pdf" \
+#  input="num=2" evid=5
 
-php-cgi grade.php go=upload tool="Upload Scans" file="tmpdir/VersionAsoln.pdf" \
-  input="num=2" evid=3
-php-cgi grade.php go=upload tool="Upload Scans" file="tmpdir/VersionA.pdf" \
-  input="num=2" evid=3
+#python createRubric.py -e 3 -t tmpdir/template-1.txt -r tmpdir/rubric-1.txt 
+#python createRubric.py -e 4 -t tmpdir/template-2.txt -r tmpdir/rubric-2.txt 
+#python createRubric.py -e 5 -t tmpdir/template-3.txt -r tmpdir/rubric-3.txt 
 
-php-cgi grade.php go=upload tool="Upload Scans" file="tmpdir/VersionBsoln.pdf" \
-  input="num=2" evid=4
-php-cgi grade.php go=upload tool="Upload Scans" file="tmpdir/VersionB.pdf" \
-  input="num=2" evid=4
-
-php-cgi grade.php go=upload tool="Upload Scans" file="tmpdir/VersionCsoln.pdf" \
-  input="num=2" evid=5
-php-cgi grade.php go=upload tool="Upload Scans" file="tmpdir/VersionC.pdf" \
-  input="num=2" evid=5
+#php-cgi grade.php go=upload tool="Upload Scans" file="tmpdir/VersionAscan.pdf" \
+#  input="num=2" evid=3
+#php-cgi grade.php go=upload tool="Upload Scans" file="tmpdir/VersionBscan.pdf" \
+#  input="num=2" evid=4
+#php-cgi grade.php go=upload tool="Upload Scans" file="tmpdir/VersionCscan.pdf" \
+#  input="num=2" evid=5
 

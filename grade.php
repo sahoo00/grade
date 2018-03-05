@@ -122,28 +122,56 @@ if (array_key_exists("go", $_GET)) {
     getTotal($_GET["scanid"]);
   }
   if (strcmp($_GET["go"], "getGrades") == 0) {
-    getGrades($_GET["examids"]);
+    getGrades($_GET["examid"]);
   }
   if (strcmp($_GET["go"], "getReGrades") == 0) {
     getReGrades($_GET["scanid"], $_GET["templateid"]);
   }
   if (strcmp($_GET["go"], "getAllRegrades") == 0) {
-    getAllRegrades($_GET["examids"]);
+    getAllRegrades($_GET["examid"]);
+  }
+  if (strcmp($_GET["go"], "doneRegrade") == 0) {
+    doneRegrade($_GET["scanid"], $_GET["done"]);
   }
 }
 
-function getAllRegrades($examids) {
+function doneRegrade($scanid, $done) {
+  $mdb = new MDB();
+  if (!$mdb->connected) {
+    echo json_encode([0, "database not connected"]);
+    return;
+  }
+  if (!$mdb->lock()) {
+    echo json_encode([0, "Couldn't get lock"]);
+    return;
+  }
+  $results = $mdb->exec("UPDATE regrades SET done = $done WHERE scanid = $scanid");
+  $res = [0, "Couldn't update regrades"];
+  if ($results) {
+    $res = [1, "Updated regrades"];
+  }
+  if (!$mdb->release()) {
+    $res = [0, "Couldn't release lock"];
+    echo json_encode($res);
+    return;
+  }
+  echo json_encode($res);
+}
+
+function getAllRegrades($examid) {
   global $evid;
-  $exams = explode(",", urldecode($examids));
+  $exams = getEvids($examid);
   $res = [];
   foreach ($exams as $e) {
     $evid = $e;
     $db = getDB();
     $shash = [];
     $str = "
-select t.id as id, t.studentID as studentID, t1.value as value from 
-(select id,studentID from scans inner join regrades
-    on regrades.scanid = scans.id and studentID != -1 and page = 1) t
+select t.id as id, t.studentID as studentID,
+t1.value as value, t.done as done from 
+(select id,studentID,sum(done) as done from scans inner join regrades
+    on regrades.scanid = scans.id and studentID != -1 and page = 1
+  group by scanid) t
   inner join
 (SELECT grades.scanid, sum(template.value) as value 
     from template inner join grades on
@@ -151,7 +179,7 @@ select t.id as id, t.studentID as studentID, t1.value as value from
     on t.id = t1.scanid";
     $results = $db->query($str);
     while ($row = $results->fetchArray()) {
-       $shash[$row["studentID"]] = [$row["id"], $row["value"]];
+       $shash[$row["studentID"]] = [$row["id"], $row["value"], $row["done"]];
     }
     $str = "SELECT * from students where grade != -1";
     $results = $db->query($str);
@@ -162,7 +190,7 @@ select t.id as id, t.studentID as studentID, t1.value as value from
         $link = "<a href=\"view.php?urid=$urid&evid=$e\"> $urid </a>";
         array_push($res, [$row["lastName"], $row["firstName"],
           $row["userName"], $row["studentID"],
-          $e, $arr[0], $row["grade"], $arr[1], $link]);
+          $e, $arr[0], $row["grade"], $arr[1], $link, $arr[2]]);
       }
     }
   }
@@ -175,14 +203,25 @@ function getReGrades($scanid, $templateid) {
   $str = "SELECT * FROM regrades WHERE scanid = $scanid AND tid = $templateid";
   $results = $db->query($str);
   while ($row = $results->fetchArray()) {
-    array_push($res, [$row["scanid"], $row["tid"], $row["notes"]]);
+    array_push($res, 
+      [$row["scanid"], $row["tid"], $row["notes"], $row["done"]]);
   }
   echo json_encode($res);
 }
 
-function getGrades($examids) {
+function getEvids($examid) {
+  $evids = [];
+  $db = new SQLite3('tmpdir/exams.db');
+  $results = $db->query("SELECT id FROM versions where examid = $examid");
+  while ($row = $results->fetchArray()) {
+    array_push($evids, $row["id"]);
+  }
+  return $evids;
+}
+
+function getGrades($examid) {
   global $evid;
-  $exams = explode(",", urldecode($examids));
+  $exams = getEvids($examid);
   $res = [];
   foreach ($exams as $e) {
     $evid = $e;
@@ -626,7 +665,7 @@ function saveReGrade($input) {
   else {
     for ($i = 0; $i < count($obj); $i++) {
       $str = "REPLACE into 'regrades' VALUES (".
-        $obj[$i][0] .  ", " . $obj[$i][1] . ", '". $obj[$i][2] . "')\n";
+        $obj[$i][0] .  ", " . $obj[$i][1] . ", '". $obj[$i][2] . "', 0)\n";
       if ($mdb->query($str) == FALSE) {
         $res = [0, "Couldn't update regrades"];
         break;
