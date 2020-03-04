@@ -1,0 +1,3 @@
+id,lastname,firstname,username,password,email,token,role,active,last
+1,Sahoo,Debashis,sahoo00,c1bc601bb783d07c4501bd6f17316f0df68a06be3ac08082840089f215b9a91f,dsahoo@ucsd.edu,926e3f87ec497d9526c3e5636582c906,admin,true,1529357548
+2,S,D,dsahoo,a1dca8affb5087cd78be62049c43bd0569eac379484fbefe4efe5252190a256d,dsahoo@eng.ucsd.edu,270541cb64b7e7c0dcd97a05fc80cb57,grader,true,1513528139

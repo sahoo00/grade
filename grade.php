@@ -321,6 +321,9 @@ function manageExams($action, $input) {
 }
 
 function getDbFile($id) {
+  if (is_null($id)) {
+    return null;
+  }
   $db = new SQLite3('tmpdir/exams.db');
   $results = $db->query("SELECT dbfile FROM versions where id = $id");
   while ($row = $results->fetchArray()) {

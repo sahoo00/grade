@@ -1,0 +1,24 @@
+1.1 (a), F
+1.1 (b), F
+1.1 (c), T
+1.1 (d), F
+1.1 (e), F
+1.2 (a), 0
+1.2 (b), T
+1.2 (c) A, worf
+1.2 (c) B, mandarin
+1.2 (c) C, mandarin
+1.2 (c) D, 0
+1.2 (c) E, mandarin
+2.1 (a), a, ape, pal
+2.1 (b), 45p
+2.2 (a), 2
+2.2 (b), 3
+3.1 (a), O(log(N)D) or O(log(N))
+3.1 (b), O(ND or O(N))
+3.1 (c), O(D)
+3.2 (a), blank
+3.2 (b), v
+3.2 (c), blank
+3.2 (d), v
+3.3, (n+1)/2

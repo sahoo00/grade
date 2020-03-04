@@ -1,0 +1,24 @@
+1.1 (a), T
+1.1 (b), T
+1.1 (c), F
+1.1 (d), T
+1.1 (e), T
+1.2 (a), 0
+1.2 (b), T
+1.2 (c) A, saoFeng
+1.2 (c) B, mandarin
+1.2 (c) C, mandarin
+1.2 (c) D, toki
+1.2 (c) E, mandarin
+2.1 (a), a, ape, eel, lap
+2.1 (b), 55p
+2.2 (a), -1
+2.2 (b), 1
+3.1 (a), O(D)
+3.1 (b), O(log(N)D) or O(log(N))
+3.1 (c), O(ND) or O(N)
+3.2 (a), blank
+3.2 (b), blank
+3.2 (c), x
+3.2 (d), x
+3.3, (n+1)/2

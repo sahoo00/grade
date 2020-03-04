@@ -7,3 +7,6 @@ CREATE TABLE graders (
   password TEXT,
   email TEXT UNIQUE,
   token TEXT, role TEXT, active TEXT, last TEXT);
+.headers on
+.mode csv
+.import examples/graders.csv graders

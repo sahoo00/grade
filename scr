@@ -1,31 +1,65 @@
 #!/bin/bash
 
 #rm -fr tmpdir/exam-0/scans
+#rm -fr tmpdir/exam-1/scans
+#rm -fr tmpdir/exam-2/scans
 #rm -fr tmpdir
-
-#mkdir -p tmpdir/exam-0/scans
-#chmod gao+rwx tmpdir
-#chmod gao+rwx tmpdir/exam-0
-#chmod gao+rwx tmpdir/exam-0/scans
 #
-#cp htpasswd tmpdir/.htpasswd
-#cp htaccess tmpdir/.htaccess
+#mkdir -p tmpdir/exam-0/scans
+#mkdir -p tmpdir/exam-1/scans
+#mkdir -p tmpdir/exam-2/scans
+#chmod -R gao+rwx tmpdir
+#
+#cp examples/htpasswd tmpdir/.htpasswd
+#cp examples/htaccess tmpdir/.htaccess
 #chmod 444 tmpdir/.ht*
 #
 #sqlite3 tmpdir/exam-0/students.db < schemas.sql
 #chmod gao+rw tmpdir/exam-0/students.db
-
+#
+#sqlite3 tmpdir/exam-1/students.db < schemas.sql
+#chmod gao+rw tmpdir/exam-1/students.db
+#
+#sqlite3 tmpdir/exam-2/students.db < schemas.sql
+#chmod gao+rw tmpdir/exam-2/students.db
+#
 #sqlite3 tmpdir/graders.db < graders.sql
 #chmod gao+rw tmpdir/graders.db
-
+#
 #sqlite3 tmpdir/exams.db < exams.sql
 #chmod gao+rw tmpdir/exams.db
-
-#php-cgi grade.php go=upload tool="Upload Scans" file="scans-1.PDF" \
-#  input="num=2" examid=0
-#php-cgi grade.php go=upload tool=Roster file="students.txt" examid=0
+#
+#php-cgi grade.php go=upload tool=Roster \
+#  file="examples/students.txt" examid=0 evid=0
+#php-cgi grade.php go=upload tool="Upload Scans" \
+#  file="examples/cse100-midterm-1A.pdf" input="num=2" examid=0 evid=0
+#
+#php-cgi grade.php go=upload tool=Roster \
+#  file="examples/students.txt" examid=1 evid=1
+#php-cgi grade.php go=upload tool="Upload Scans" \
+#  file="examples/cse100-midterm-1B.pdf" input="num=2" examid=1 evid=1
+#
+#php-cgi grade.php go=upload tool=Roster \
+#  file="examples/students.txt" examid=2 evid=2
+#php-cgi grade.php go=upload tool="Upload Scans" \
+#  file="examples/cse100-midterm-1C.pdf" input="num=2" examid=2 evid=2
+#
+#cp examples/template-ann-list-1A.json tmpdir/exam-0/ann-list.json
+#cp examples/template-ann-list-1B.json tmpdir/exam-1/ann-list.json
+#cp examples/template-ann-list-1C.json tmpdir/exam-2/ann-list.json
+#chmod gao+rw tmpdir/exam-*/ann-list.json
 #
 #sqlite3 tmpdir/exam-0/students.db < print.sql 
+
+#sqlite3 tmpdir/exam-0/students.db < clearRubric.sql
+#sqlite3 tmpdir/exam-1/students.db < clearRubric.sql
+#sqlite3 tmpdir/exam-2/students.db < clearRubric.sql
+#python createRubric.py -e 0 -t examples/template-1A-import.txt \
+#  -r examples/rubric-1A.txt
+#python createRubric.py -e 1 -t examples/template-1B-import.txt \
+#  -r examples/rubric-1B.txt
+#python createRubric.py -e 2 -t examples/template-1C-import.txt \
+#  -r examples/rubric-1C.txt
 
 # To update autoincrement sequence
 # UPDATE SQLITE_SEQUENCE SET SEQ=1 WHERE NAME='graders';

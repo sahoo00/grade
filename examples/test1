@@ -1,0 +1,12 @@
+#!/bin/bash
+
+
+#php-cgi tools.php username=dsahoo password1=hhhh password2=hhhh\
+#    sha1="d70e1c5c60d5c7efe683d8a696beaa773b4fa190" \
+#    firstname=D lastname=S op=signup email="dsahoo@eng.ucsd.edu"
+
+php-cgi tools.php username=dsahoo password1=hhhh \
+    sha1="d70e1c5c60d5c7efe683d8a696beaa773b4fa190" \
+    op=login
+#php-cgi tools.php email="dsahoo@eng.ucsd.edu" \
+#    op=reset
