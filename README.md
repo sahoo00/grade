@@ -16,6 +16,7 @@ sudo apt-get install libapache2-mod-php
 sudo apt-get install sqlite3 php-sqlite3
 sudo apt-get install mysql-server
 sudo apt-get install mysql-client
+sudo apt-get install php-mysql
 
 setup mysql user:
 
