@@ -20,7 +20,7 @@ sudo apt-get install mysql-client
 setup mysql user:
 
 mysql -u root -prootpassword
-
+CREATE USER 'cse100'@'localhost' IDENTIFIED BY 'fall2015';
 CREATE DATABASE cse100f17;
 GRANT ALL PRIVILEGES ON cse100f17.\* TO 'cse100'@'localhost';
 FLUSH PRIVILEGES;
