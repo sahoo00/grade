@@ -82,8 +82,8 @@ Password: sahoo123
 
 Protect tmpdir using following
 ```
-examples/htaccess
-examples/htpasswd
+cp examples/htaccess tmpdir
+cp examples/htpasswd tmpdir
 
 Username: sahoo
 Password: sahoo123
